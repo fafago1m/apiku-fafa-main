@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActStore - Advanced Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #1a202c; }
+::-webkit-scrollbar-thumb {
+    background: #6b21a8; border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #a855f7;
+}
+
+html { scroll-behavior: smooth; }
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #0d1117;
+    color: #d1c4e9; /* Soft lavender */
+}
+
+.api-card {
+    background-color: #1e1b2e;
+    border: 1px solid #3f3c5c;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+    box-shadow: 0 4px 6px rgba(128, 0, 128, 0.2);
+}
+
+.api-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2), 0 0 15px rgba(168, 85, 247, 0.1);
+    border-color: #a855f7;
+}
+
+.param-chip {
+    background-color: #2c273a;
+    color: #c084fc;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid #4b445d;
+    display: inline-block;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.param-chip:hover {
+    background-color: #c084fc;
+    color: #1e1b2e;
+}
+
+.method-tag {
+    color: white;
+    font-size: 0.70rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+    margin-right: 0.75rem;
+    min-width: 50px;
+    text-align: center;
+    display: inline-block;
+    border: 1px solid transparent;
+    letter-spacing: 0.5px;
+}
+
+.method-get { background-color: #9333ea; border-color: #6b21a8; }
+.method-post { background-color: #7e22ce; border-color: #581c87; }
+
+.try-btn {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    transition: background-position 0.3s, transform 0.2s, box-shadow 0.2s;
+    background-size: 200% auto;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.try-btn:hover:not(.disabled-btn) {
+    background-position: right center;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(168, 85, 247, 0.5);
+}
+
+.disabled-btn {
+    cursor: not-allowed;
+    background-color: #4a5568 !important;
+}
+
+.disabled-btn:hover {
+    transform: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.section-title-icon {
+    margin-right: 0.75rem;
+    font-size: 1.6em;
+    opacity: 0.8;
+    color: #a855f7;
+}
+
+.header-title {
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px;
+}
+
+    </style>
+</head>
+<body class="bg-slate-900 text-gray-300">
+    <div class="container mx-auto p-6 max-w-5xl">
+
+        <header class="text-center mb-12 border-b border-slate-700 pb-8">
+            <h1 class="header-title text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-600 to-indigo-500 flex items-center justify-center py-2">
+    <i class="fas fa-satellite-dish mr-4 text-4xl text-purple-400"></i>
+    Act API
+    <span class="ml-3 text-xs bg-slate-800 text-purple-300 px-3 py-1 rounded-full font-semibold tracking-wider">v1.0.0</span>
+</h1>
+
+            <p class="mt-3 text-slate-400 text-lg">Advanced RESTful Interface for Act Store Service.</p>
+            <div class="mt-5 space-x-6">
+                <a href="https://wa.me/6285171502270" target="_blank" class="text-cyan-400 hover:text-cyan-300 transition duration-300 text-sm hover:underline">
+                    <i class="fab fa-whatsapp mr-1"></i> Contact Developer
+                </a>
+                <a href="#" class="text-cyan-400 hover:text-cyan-300 transition duration-300 text-sm hover:underline">
+                    <i class="fas fa-book-open mr-1"></i> API Info & Terms
+                </a>
+            </div>
+        </header>
+
+        <main class="space-y-12">
+
+            <section id="orkut-gateway">
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6 border-b-2 border-slate-700 pb-3 flex items-center">
+                    <i class="fas fa-credit-card section-title-icon"></i>
+                    Orderkuota Gateway
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Create Payment</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/orkut/createpayment</p>
+                        <div class="mb-5">
+                            <h4 class="text-sm font-medium text-cyan-400 mb-2">PARAMETERS:</h4>
+                            <span class="param-chip">apikey</span>
+                            <span class="param-chip">amount</span>
+                            <span class="param-chip">codeqr</span>
+                        </div>
+                        <a href="/api/orkut/createpayment?apikey=YOUR_API_KEY&amount=1000&codeqr=YOUR_QR_CODE" target="_blank" 
+                           class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md 
+                                  bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 
+                                  focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50">
+                            Execute <i class="fas fa-external-link-alt ml-2"></i>
+                        </a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Cek Status</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/orkut/cekstatus</p>
+                        <div class="mb-5">
+                            <h4 class="text-sm font-medium text-cyan-400 mb-2">PARAMETERS:</h4>
+                            <span class="param-chip">apikey</span>
+                            <span class="param-chip">merchant</span>
+                            <span class="param-chip">keyorkut</span>
+                        </div>
+                        <a href="/api/orkut/cekstatus?apikey=YOUR_API_KEY&merchant=MERCHANT_ID&keyorkut=ORKUT_KEY" target="_blank" 
+                           class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md 
+                                  bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700
+                                  focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50">
+                            Execute <i class="fas fa-external-link-alt ml-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="downloader">
+                <h2 class="text-3xl font-semibold text-green-400 mb-6 border-b-2 border-slate-700 pb-3 flex items-center">
+                    <i class="fas fa-download section-title-icon" style="color: #4ade80;"></i>
+                    Downloader Utilities
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- AIO DL -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">AIO Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/aiodl</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/aiodl?url=PASTE_URL_HERE" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Tiktok DL -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Tiktok Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/tiktokdl</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/tiktokdl?url=TIKTOK_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Facebook DL -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Facebook Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/fbdl</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/fbdl?url=FACEBOOK_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <!-- Instagram DL -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Instagram Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/igdl</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/igdl?url=INSTAGRAM_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <!-- YouTube MP3 -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">YouTube MP3</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/ytmp3</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/ytmp3?url=YOUTUBE_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- YouTube MP4 -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">YouTube MP4</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/ytmp4</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/ytmp4?url=YOUTUBE_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <!-- YouTube Downloader V2 -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">YouTube Downloader V2</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/ytdlv2</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/ytdlv2?url=YOUTUBE_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Twitter Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Twitter Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/twitter</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/twitter?url=TWITTER_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Doodstream Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Doodstream Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/doodstream</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/doodstream?url=DOODSTREAM_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- SoundCloud Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">SoundCloud Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/soundcloud</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/soundcloud?url=SOUNDCLOUD_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Google Drive Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Google Drive Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/gdrive</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/gdrive?url=GDRIVE_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- MediaFire Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">MediaFire Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/mediafire</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/mediafire?url=MEDIAFIRE_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <!-- Pinterest Video Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Pinterest Video DL</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/pindlvid</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/pindlvid?url=PINTEREST_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Capcut Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Capcut Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/capcut</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/capcut?url=CAPCUT_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Spotify Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Spotify Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/spotify</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/spotify?url=SPOTIFY_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Play Spotify -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Play Spotify</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/playspotify</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">q</span></div>
+                        <a href="/api/download/playspotify?q=SONG_TITLE" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Snack Video Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Snack Video DL</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/snackvideo</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/snackvideo?url=SNACKVIDEO_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Terabox Downloader -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Terabox Downloader</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/terabox</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-green-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/terabox?url=TERABOX_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- XNXX DL Card -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700 border-red-500/50">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-red-400">XNXX Downloader</h3>
+                            <span class="method-tag method-get" style="background-color: #c62828; border-color: #b71c1c;">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/download/xnxxdl</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-red-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/download/xnxxdl?url=XNXX_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-red-600 to-pink-700 hover:from-red-700 hover:to-pink-800">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="ai">
+                 <h2 class="text-3xl font-semibold text-purple-400 mb-6 border-b-2 border-slate-700 pb-3 flex items-center">
+                    <i class="fas fa-brain section-title-icon" style="color: #a78bfa;"></i>
+                    Artificial Intelligence
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- OpenAI Prompt -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">OpenAI (Prompt)</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/ai/openai-prompt</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-purple-400 mb-2">PARAMETERS:</h4><span class="param-chip">prompt</span><span class="param-chip">msg</span></div>
+                        <a href="/api/ai/openai-prompt?prompt=YOUR_PROMPT&msg=YOUR_MESSAGE" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">OpenAI</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/ai/openai</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-purple-400 mb-2">PARAMETERS:</h4><span class="param-chip">msg</span></div>
+                        <a href="/api/ai/openai?msg=YOUR_MESSAGE" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Blackbox AI</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/ai/blackbox</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-purple-400 mb-2">PARAMETERS:</h4><span class="param-chip">msg</span></div>
+                        <a href="/api/ai/blackbox?msg=YOUR_MESSAGE" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">SimSimi</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/ai/simsimi</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-purple-400 mb-2">PARAMETERS:</h4><span class="param-chip">msg</span></div>
+                        <a href="/api/ai/simsimi?msg=YOUR_MESSAGE" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">DeepSeek AI</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/ai/deepseek</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-purple-400 mb-2">PARAMETERS:</h4><span class="param-chip">msg</span></div>
+                        <a href="/api/ai/deepseek?msg=YOUR_MESSAGE" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">GPT-4</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/ai/gpt4</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-purple-400 mb-2">PARAMETERS:</h4><span class="param-chip">text</span></div>
+                        <a href="/api/ai/gpt4?text=YOUR_TEXT" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">GPT-3.5 Turbo</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/ai/gpt-3-5-turbo</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-purple-400 mb-2">PARAMETERS:</h4><span class="param-chip">text</span></div>
+                        <a href="/api/ai/gpt-3-5-turbo?text=YOUR_TEXT" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Gemini</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/ai/gemini</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-purple-400 mb-2">PARAMETERS:</h4><span class="param-chip">text</span></div>
+                        <a href="/api/ai/gemini?text=YOUR_TEXT" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                 </div>
+            </section>
+
+            <section id="image-creator">
+                <h2 class="text-3xl font-semibold text-pink-400 mb-6 border-b-2 border-slate-700 pb-3 flex items-center">
+                    <i class="fas fa-palette section-title-icon" style="color: #f472b6;"></i>
+                    Image Manipulation
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Remini -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Remini Enhance</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/imagecreator/remini</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-pink-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/imagecreator/remini?url=IMAGE_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Remove BG -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Remove Background</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/imagecreator/removebg</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-pink-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/imagecreator/removebg?url=IMAGE_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Quote Creator -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Quote Creator</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/imagecreator/qc</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-pink-400 mb-2">PARAMETERS:</h4><span class="param-chip">text</span><span class="param-chip">fotoUrl</span><span class="param-chip">nama</span></div>
+                        <a href="/api/imagecreator/qc?text=QUOTE_TEXT&fotoUrl=IMAGE_URL&nama=NAME" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                </div>
+            </section>
+
+             <section id="tools">
+                <h2 class="text-3xl font-semibold text-amber-400 mb-6 border-b-2 border-slate-700 pb-3 flex items-center">
+                    <i class="fas fa-tools section-title-icon" style="color: #f59e0b;"></i>
+                    Utility Tools
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- TinyURL -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">TinyURL Shortener</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/tinyurl</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/tools/tinyurl?url=LONG_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Is.gd Shortener</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/isgd</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/tools/isgd?url=LONG_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Whois Lookup</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/whois</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">domain</span></div>
+                        <a href="/api/tools/whois?domain=example.com" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">OCR (Image to Text)</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/ocr</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/tools/ocr?url=IMAGE_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Instagram Stalk</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/igstalk</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">username</span></div>
+                        <a href="/api/tools/igstalk?username=INSTA_USER" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">NPM Stalk</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/npmstalk</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">pkgname</span></div>
+                        <a href="/api/tools/npmstalk?pkgname=PACKAGE_NAME" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">TikTok Stalk</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/tiktokstalk</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">user</span></div>
+                        <a href="/api/tools/tiktokstalk?user=TIKTOK_USERNAME" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">GitHub Stalk</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/githubstalk</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">username</span></div>
+                        <a href="/api/tools/githubstalk?username=GITHUB_USER" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">YouTube Stalk</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/youtubestalk</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">user</span></div>
+                        <a href="/api/tools/youtubestalk?user=YOUTUBE_CHANNEL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Get Headers</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/getheaders</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">url</span></div>
+                        <a href="/api/tools/getheaders?url=TARGET_URL" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Style Text</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/styletext</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">text</span></div>
+                        <a href="/api/tools/styletext?text=YOUR_TEXT" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Translate Text</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/translate</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-amber-400 mb-2">PARAMETERS:</h4><span class="param-chip">text</span><span class="param-chip">lang</span></div>
+                        <a href="/api/tools/translate?text=Hello&lang=id" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Upload Image</h3>
+                            <span class="method-tag method-post">POST</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/tools/upload</p>
+                        <div class="mb-5">
+                            <h4 class="text-sm font-medium text-amber-400 mb-2">BODY:</h4>
+                            <span class="param-chip">image (form-data)</span>
+                        </div>
+                        <button title="Use tools like Postman or cURL for POST requests."
+                           class="try-btn disabled-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md">
+                            Info (POST) <i class="fas fa-info-circle ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="search">
+                <h2 class="text-3xl font-semibold text-red-400 mb-6 border-b-2 border-slate-700 pb-3 flex items-center">
+                    <i class="fas fa-search section-title-icon" style="color: #f87171;"></i>
+                    Search Engines
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Wikipedia -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Wikipedia Search</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/search/wikipedia</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-red-400 mb-2">PARAMETERS:</h4><span class="param-chip">q</span></div>
+                        <a href="/api/search/wikipedia?q=SEARCH_QUERY" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- Google Image -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Google Image Search</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/search/gimage</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-red-400 mb-2">PARAMETERS:</h4><span class="param-chip">q</span></div>
+                        <a href="/api/search/gimage?q=IMAGE_QUERY" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <!-- NPM Search -->
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">NPM Package Search</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/search/npm</p>
+                        <div class="mb-5"><h4 class="text-sm font-medium text-red-400 mb-2">PARAMETERS:</h4><span class="param-chip">q</span></div>
+                        <a href="/api/search/npm?q=PACKAGE_QUERY" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="pterodactyl">
+                <h2 class="text-3xl font-semibold text-sky-400 mb-6 border-b-2 border-slate-700 pb-3 flex items-center">
+                    <i class="fas fa-server section-title-icon" style="color: #38bdf8;"></i>
+                    Pterodactyl Panel
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">List Panel Servers</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/pterodactyl/listpanel</p>
+                        <div class="mb-5">
+                            <h4 class="text-sm font-medium text-sky-400 mb-2">PARAMETERS:</h4>
+                            <span class="param-chip">eggid</span><span class="param-chip">nestid</span><span class="param-chip">loc</span>
+                            <span class="param-chip">domain</span><span class="param-chip">ptla</span><span class="param-chip">ptlc</span>
+                        </div>
+                        <a href="/api/pterodactyl/listpanel?domain=YOUR_DOMAIN&ptla=YOUR_PTLA_KEY&ptlc=YOUR_PTLC_KEY&loc=LOC_ID&eggid=EGG_ID&nestid=NEST_ID" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                     <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Create Panel Server</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/pterodactyl/create</p>
+                        <div class="mb-5">
+                            <h4 class="text-sm font-medium text-sky-400 mb-2">PARAMETERS:</h4>
+                            <span class="param-chip">domain</span><span class="param-chip">ptla</span><span class="param-chip">ptlc</span>
+                            <span class="param-chip">loc</span><span class="param-chip">eggid</span><span class="param-chip">nestid</span>
+                            <span class="param-chip">ram</span><span class="param-chip">disk</span><span class="param-chip">cpu</span>
+                            <span class="param-chip">username</span>
+                        </div>
+                        <a href="/api/pterodactyl/create?domain=YOUR_DOMAIN&ptla=PTLA_KEY&ptlc=PTLC_KEY&loc=LOC_ID&eggid=EGG_ID&nestid=NEST_ID&ram=1024&disk=5120&cpu=100&username=USER" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                    <div class="api-card bg-slate-800 p-6 rounded-xl shadow-xl border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-slate-100">Delete Panel Server</h3>
+                            <span class="method-tag method-get">GET</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4 font-mono bg-slate-900 p-3 rounded-md tracking-wider">/api/pterodactyl/delete</p>
+                        <div class="mb-5">
+                            <h4 class="text-sm font-medium text-sky-400 mb-2">PARAMETERS:</h4>
+                            <span class="param-chip">domain</span><span class="param-chip">ptla</span><span class="param-chip">idserver</span>
+                        </div>
+                        <a href="/api/pterodactyl/delete?domain=YOUR_DOMAIN&ptla=YOUR_PTLA_KEY&idserver=SERVER_ID" target="_blank" class="try-btn text-sm block text-center w-full text-white px-4 py-2.5 rounded-md bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700">Execute <i class="fas fa-external-link-alt ml-2"></i></a>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+         <footer class="mt-16 text-center text-slate-500 text-sm border-t border-slate-700 pt-8 pb-4">
+            <p>&copy; 2025 Nikioke API. All Rights Reserved.</p>
+            <p class="mt-1">Designed with a futuristic touch. Powered by Node.js, Express & Tailwind CSS.</p>
+        </footer>
+    </div>
+
+<script>
+    // No complex JS needed for this version as "Try" buttons are direct links.
+    // Subtle hover/focus effects are handled by CSS.
+    // You could add JS for a live search/filter bar, or interactive API testing in-page in the future.
+</script>
+</body>
+</html>
