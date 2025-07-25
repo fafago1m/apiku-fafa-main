@@ -1441,70 +1441,85 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 app.get("/api/pterodactyl/create", async (req, res) => {
     let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query;
 
+    // Validasi parameter wajib
     if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
         return res.json("Isi Parameternya!");
     }
 
     try {
-        let apikey = ptla;
-        let capiley = ptlc;
-        let disknya = disk;
-        domain = "https://" + domain;
-        username = username.toLowerCase();
-        let email = username + "@gmail.com";
-        let name = username.charAt(0).toUpperCase() + username.slice(1) + " Server";
-        let desc = tanggal(Date.now());
+        const apikey = ptla;
+        const capiley = ptlc;
+        const disknya = disk;
+        const fullDomain = `https://${domain}`;
+        const email = `${username.toLowerCase()}@gmail.com`;
+        const name = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase() + " Server";
+        const desc = tanggal(Date.now());
 
-        // Cari user berdasarkan email
-        let userFetch = await fetch(`${domain}/api/application/users?filter[email]=${email}`, {
+        // Ambil user dari email
+        const userFetch = await fetch(`${fullDomain}/api/application/users?filter[email]=${email}`, {
             method: "GET",
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + apikey
+                "Authorization": `Bearer ${apikey}`
             }
         });
 
-        let userJson = await userFetch.json();
-        if (!userJson.data || userJson.data.length === 0) return res.json({ error: "User tidak ditemukan" });
+        const userJson = await userFetch.json();
+        if (!userJson.data || userJson.data.length === 0)
+            return res.json({ error: "User tidak ditemukan" });
 
-        let user = userJson.data[0].attributes;
-        let usr_id = user.id;
+        const user = userJson.data[0].attributes;
+        const usr_id = user.id;
 
-        // Ambil data Egg
-        let f1 = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
+        // Ambil data egg
+        const eggFetch = await fetch(`${fullDomain}/api/application/nests/${nestid}/eggs/${eggid}`, {
             method: "GET",
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + apikey
+                "Authorization": `Bearer ${apikey}`
             }
         });
 
-        let data2 = await f1.json();
-        let startup_cmd = data2.attributes.startup;
+        const eggJson = await eggFetch.json();
+        const startup_cmd = eggJson.attributes.startup;
 
-        // Buat server
-        let f2 = await fetch(`${domain}/api/application/servers`, {
+        // Bangun object environment dari query string
+        const environment = {
+            "INST": "npm",
+            "USER_UPLOAD": "0",
+            "AUTO_UPDATE": "0",
+            "CMD_RUN": "npm start"
+        };
+
+        // Tambahkan semua key environment dari query seperti environment[KEY]=value
+        for (let key in req.query) {
+            if (key.startsWith("environment[")) {
+                const match = key.match(/environment\[(.+?)\]/);
+                if (match && match[1]) {
+                    const envKey = match[1];
+                    environment[envKey] = req.query[key];
+                }
+            }
+        }
+
+        // Buat server baru
+        const serverCreate = await fetch(`${fullDomain}/api/application/servers`, {
             method: "POST",
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + apikey
+                "Authorization": `Bearer ${apikey}`
             },
             body: JSON.stringify({
                 name: name,
                 description: desc,
                 user: usr_id,
                 egg: parseInt(eggid),
-                docker_image: data2.attributes.docker_image,
+                docker_image: eggJson.attributes.docker_image,
                 startup: startup_cmd,
-                environment: {
-                    "INST": "npm",
-                    "USER_UPLOAD": "0",
-                    "AUTO_UPDATE": "0",
-                    "CMD_RUN": "npm start"
-                },
+                environment: environment,
                 limits: {
                     memory: parseInt(ram),
                     swap: 0,
@@ -1526,10 +1541,13 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             })
         });
 
-        let result = await f2.json();
-        if (result.errors) return res.json(JSON.stringify(result.errors[0], null, 2));
+        const result = await serverCreate.json();
+        if (result.errors) {
+            return res.json(JSON.stringify(result.errors[0], null, 2));
+        }
 
-        let server = result.attributes;
+        const server = result.attributes;
+
         return res.json({
             status: true,
             creator: global.creator || "anonymous",
@@ -1537,18 +1555,21 @@ app.get("/api/pterodactyl/create", async (req, res) => {
                 id_user: usr_id,
                 id_server: server.id,
                 username: user.username,
-                password: "User sudah ada", // password tidak dibuat ulang
+                password: "User sudah ada",
                 ram: ram,
                 disk: disknya,
                 cpu: cpu,
-                domain: `${domain}`,
+                domain: fullDomain,
                 created_at: tanggal(Date.now())
             }
         });
 
     } catch (error) {
         console.error(error);
-        res.send({ error: "Terjadi kesalahan pada server.", detail: error.message });
+        return res.json({
+            error: "Terjadi kesalahan pada server.",
+            detail: error.message
+        });
     }
 });
 
