@@ -1439,46 +1439,101 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 });
 
 app.get("/api/pterodactyl/create", async (req, res) => {
-let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query
-if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) return res.json("Isi Parameternya!");
-    try {  
-let apikey = ptla
-let capiley = ptlc
-let disknya = disk
-domain = "https://" + domain
-username = username.toLowerCase()
-let email = username+"@gmail.com"
-let name = capital(username) + " Server"
-let password = username+crypto.randomBytes(3).toString('hex')
-let f = await fetch(domain + "/api/application/users", {
-"method": "POST",
-"headers": {
-"Accept": "application/json",
-"Content-Type": "application/json",
-"Authorization": "Bearer " + apikey
-},
-"body": JSON.stringify({
-"email": email,
-"username": username.toLowerCase(),
-"first_name": name,
-"last_name": "Server",
-"language": "en",
-"password": password.toString()
-})
-})
-let data = await f.json();
-if (data.errors) return res.json(JSON.stringify(data.errors[0], null, 2))
-let user = data.attributes
-let desc = tanggal(Date.now())
-let usr_id = user.id
-let f1 = await fetch(domain + `/api/application/nests/${nestid}/eggs/` + eggid, {
-"method": "GET",
-"headers": {
-"Accept": "application/json",
-"Content-Type": "application/json",
-"Authorization": "Bearer " + apikey
-}
-})
+  let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username, user_id } = req.query;
+  if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || (!username && !user_id))
+    return res.json("Isi Parameternya!");
+
+  try {
+    const apikey = ptla;
+    const capiley = ptlc;
+    const disknya = disk;
+    domain = "https://" + domain;
+    let usr_id = user_id;
+
+    // Jika user_id tidak ada, ambil dari username
+    if (!usr_id) {
+      let userResp = await fetch(`${domain}/api/application/users?filter[email]=${username}@gmail.com`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apikey}`,
+        },
+      });
+      let userData = await userResp.json();
+      if (!userData.data || userData.data.length === 0) return res.json("User tidak ditemukan");
+      usr_id = userData.data[0].attributes.id;
+    }
+
+    // Ambil egg data
+    let eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apikey}`,
+      },
+    });
+
+    let eggData = await eggRes.json();
+    let startup = eggData.attributes.startup;
+    let env = eggData.attributes.variables.reduce((acc, variable) => {
+      acc[variable.env_variable] = variable.default_value;
+      return acc;
+    }, {});
+
+    // Buat server
+    let serverRes = await fetch(`${domain}/api/application/servers`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apikey}`,
+      },
+      body: JSON.stringify({
+        name: capital(username) + " Server",
+        user: usr_id,
+        egg: parseInt(eggid),
+        docker_image: eggData.attributes.docker_image,
+        startup: startup,
+        environment: env,
+        limits: {
+          memory: parseInt(ram),
+          swap: 0,
+          disk: parseInt(disknya),
+          io: 500,
+          cpu: parseInt(cpu),
+        },
+        feature_limits: {
+          databases: 1,
+          backups: 1,
+          allocations: 1,
+        },
+        allocation: {
+          default: parseInt(loc),
+        },
+        deploy: {
+          locations: [parseInt(loc)],
+          dedicated_ip: false,
+          port_range: [],
+        },
+        start_on_completion: true,
+      }),
+    });
+
+    let server = await serverRes.json();
+    if (server.errors) return res.json(server.errors[0]);
+
+    return res.json({
+      message: "Server berhasil dibuat",
+      server: server,
+    });
+
+  } catch (e) {
+    return res.json({ error: true, message: e.message });
+  }
+});
+
 let data2 = await f1.json();
 let startup_cmd = data2.attributes.startup
 let f2 = await fetch(domain + "/api/application/servers", {
