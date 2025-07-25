@@ -1448,14 +1448,15 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     try {
         let apikey = ptla;
         let capiley = ptlc;
+        let disknya = disk;
         domain = "https://" + domain;
         username = username.toLowerCase();
         let email = username + "@gmail.com";
         let name = username.charAt(0).toUpperCase() + username.slice(1) + " Server";
         let desc = tanggal(Date.now());
 
-        // 1. Cari user berdasarkan email (karena tidak membuat user baru)
-        let findUser = await fetch(`${domain}/api/application/users?filter[email]=${email}`, {
+        // Cari user berdasarkan email
+        let userFetch = await fetch(`${domain}/api/application/users?filter[email]=${email}`, {
             method: "GET",
             headers: {
                 "Accept": "application/json",
@@ -1464,14 +1465,14 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             }
         });
 
-        let userData = await findUser.json();
-        if (!userData.data || userData.data.length === 0) return res.json("User tidak ditemukan!");
+        let userJson = await userFetch.json();
+        if (!userJson.data || userJson.data.length === 0) return res.json({ error: "User tidak ditemukan" });
 
-        let user = userData.data[0].attributes;
+        let user = userJson.data[0].attributes;
         let usr_id = user.id;
 
-        // 2. Ambil info egg untuk environment
-        let getEgg = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
+        // Ambil data Egg
+        let f1 = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
             method: "GET",
             headers: {
                 "Accept": "application/json",
@@ -1480,16 +1481,11 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             }
         });
 
-        let eggData = await getEgg.json();
-        let env = {};
+        let data2 = await f1.json();
+        let startup_cmd = data2.attributes.startup;
 
-        // Setup environment variable default dari egg
-        eggData.attributes.relationships.variables.data.forEach(v => {
-            env[v.attributes.env_variable] = v.attributes.default_value;
-        });
-
-        // 3. Buat server
-        let create = await fetch(`${domain}/api/application/servers`, {
+        // Buat server
+        let f2 = await fetch(`${domain}/api/application/servers`, {
             method: "POST",
             headers: {
                 "Accept": "application/json",
@@ -1498,110 +1494,63 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             },
             body: JSON.stringify({
                 name: name,
+                description: desc,
                 user: usr_id,
                 egg: parseInt(eggid),
-                docker_image: eggData.attributes.docker_image,
-                startup: eggData.attributes.startup,
-                environment: env,
+                docker_image: data2.attributes.docker_image,
+                startup: startup_cmd,
+                environment: {
+                    "INST": "npm",
+                    "USER_UPLOAD": "0",
+                    "AUTO_UPDATE": "0",
+                    "CMD_RUN": "npm start"
+                },
                 limits: {
                     memory: parseInt(ram),
                     swap: 0,
-                    disk: parseInt(disk),
+                    disk: parseInt(disknya),
                     io: 500,
                     cpu: parseInt(cpu)
                 },
                 feature_limits: {
-                    databases: 1,
-                    backups: 1,
-                    allocations: 1
-                },
-                allocation: {
-                    default: await getFreeAllocation(domain, apikey, loc)
+                    databases: 5,
+                    backups: 5,
+                    allocations: 5
                 },
                 deploy: {
                     locations: [parseInt(loc)],
                     dedicated_ip: false,
                     port_range: []
                 },
-                start_on_completion: true,
-                description: desc
+                start_on_completion: true
             })
         });
 
-        let hasil = await create.json();
-        if (hasil.errors) return res.json(JSON.stringify(hasil.errors[0], null, 2));
-        res.json(hasil);
+        let result = await f2.json();
+        if (result.errors) return res.json(JSON.stringify(result.errors[0], null, 2));
 
-    } catch (e) {
-        console.error(e);
-        res.json({ error: "Terjadi kesalahan!" });
+        let server = result.attributes;
+        return res.json({
+            status: true,
+            creator: global.creator || "anonymous",
+            result: {
+                id_user: usr_id,
+                id_server: server.id,
+                username: user.username,
+                password: "User sudah ada", // password tidak dibuat ulang
+                ram: ram,
+                disk: disknya,
+                cpu: cpu,
+                domain: `${domain}`,
+                created_at: tanggal(Date.now())
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.send({ error: "Terjadi kesalahan pada server.", detail: error.message });
     }
 });
-
-let data2 = await f1.json();
-let startup_cmd = data2.attributes.startup
-let f2 = await fetch(domain + "/api/application/servers", {
-"method": "POST",
-"headers": {
-"Accept": "application/json",
-"Content-Type": "application/json",
-"Authorization": "Bearer " + apikey,
-},
-"body": JSON.stringify({
-"name": name,
-"description": desc,
-"user": usr_id,
-"egg": parseInt(eggid),
-"docker_image": "ghcr.io/parkervcp/yolks:nodejs_18",
-"startup": startup_cmd,
-"environment": {
-"INST": "npm",
-"USER_UPLOAD": "0",
-"AUTO_UPDATE": "0",
-"CMD_RUN": "npm start"
-},
-"limits": {
-"memory": ram,
-"swap": 0,
-"disk": disknya,
-"io": 500,
-"cpu": cpu
-},
-"feature_limits": {
-"databases": 5,
-"backups": 5,
-"allocations": 5
-},
-deploy: {
-locations: [parseInt(loc)],
-dedicated_ip: false,
-port_range: [],
-},
-})
-})
-let result = await f2.json()
-if (result.errors) return res.json(JSON.stringify(result.errors[0], null, 2))
-let server = result.attributes
-return res.json({
-status: true, 
-creator: global.creator, 
-result: {
-id_user: usr_id, 
-id_server: server.id, 
-username: user.username, 
-password: password, 
-ram: ram, 
-disk: disknya, 
-cpu: cpu, 
-domain: `${domain}`, 
-created_at: tanggal(Date.now())
-}
-})
-    } catch (error) {
-        console.log(error);
-        res.send(error)
-    }
-})
 
 
 app.use((err, req, res, next) => {
