@@ -1446,15 +1446,18 @@ app.get("/api/pterodactyl/create", async (req, res) => {
   }
 
   try {
-    domain = "https://" + domain;
+    domain = domain.startsWith("http") ? domain : "https://" + domain;
     const apikey = ptla;
     const email = username.toLowerCase() + "@gmail.com";
     const password = username + crypto.randomBytes(3).toString("hex");
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
 
-    // 🔍 Cek user berdasarkan email
-    const usersRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
+    let user = null;
+    let usr_id = null;
+
+    // 🔍 Cari user berdasarkan email
+    const emailRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${apikey}`,
@@ -1463,16 +1466,15 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       },
     });
 
-    const usersData = await usersRes.json();
-    if (usersData.errors) return res.json({ status: false, error: usersData.errors[0].detail });
+    const emailData = await emailRes.json();
+    if (emailData.errors) return res.json({ status: false, error: emailData.errors[0].detail });
 
-    let user = usersData.data?.[0]?.attributes;
-    let usr_id = user?.id;
-
-    // 👤 Buat user jika belum ada
-    if (!user) {
-      // 🔍 Cek apakah username sudah digunakan
-      const checkUsernameRes = await fetch(`${domain}/api/application/users?filter[username]=${encodeURIComponent(username.toLowerCase())}`, {
+    if (emailData.data.length > 0) {
+      user = emailData.data[0].attributes;
+      usr_id = user.id;
+    } else {
+      // 🔍 Kalau belum ada user dengan email, cek username
+      const usernameRes = await fetch(`${domain}/api/application/users?filter[username]=${encodeURIComponent(username.toLowerCase())}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apikey}`,
@@ -1481,34 +1483,35 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         },
       });
 
-      const usernameData = await checkUsernameRes.json();
-      if (usernameData?.data?.length > 0) {
-        return res.json({ status: false, error: "Username sudah digunakan. Gunakan username lain." });
+      const usernameData = await usernameRes.json();
+      if (usernameData.data.length > 0) {
+        user = usernameData.data[0].attributes;
+        usr_id = user.id;
+      } else {
+        // 👤 Buat user baru
+        const createUserRes = await fetch(`${domain}/api/application/users`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apikey}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            username: username.toLowerCase(),
+            email,
+            first_name: capital(username),
+            last_name: "Server",
+            language: "en",
+            password,
+          }),
+        });
+
+        const newUser = await createUserRes.json();
+        if (newUser.errors) return res.json({ status: false, error: newUser.errors[0].detail });
+
+        user = newUser.attributes;
+        usr_id = user.id;
       }
-
-      // 🚧 Buat user baru
-      const createUserRes = await fetch(`${domain}/api/application/users`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apikey}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          username: username.toLowerCase(),
-          email,
-          first_name: capital(username),
-          last_name: "Server",
-          language: "en",
-          password,
-        }),
-      });
-
-      const newUser = await createUserRes.json();
-      if (newUser.errors) return res.json({ status: false, error: newUser.errors[0].detail });
-
-      user = newUser.attributes;
-      usr_id = user.id;
     }
 
     // 📦 Ambil egg + variabel
@@ -1535,11 +1538,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     for (const v of envVars) {
       const key = v.attributes.env_variable;
       const defaultVal = v.attributes.default_value;
-      if (key === "BEDROCK_VERSION") {
-        environment[key] = "1.21.0"; // Ubah sesuai input jika perlu
-      } else {
-        environment[key] = defaultVal || "";
-      }
+      environment[key] = (key === "BEDROCK_VERSION") ? "1.21.0" : defaultVal || "";
     }
 
     // 🚀 Buat server
@@ -1598,12 +1597,12 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         created_at: tanggal(Date.now()),
       },
     });
+
   } catch (error) {
     console.error("❌ Server creation error:", error);
     return res.json({ status: false, error: error.message || "Terjadi kesalahan internal." });
   }
 });
-
 
 
 app.use((err, req, res, next) => {
