@@ -6,7 +6,7 @@ const crypto = require("crypto")
 const bodyParser = require('body-parser');
 const fs = require("fs");
 const app = express();
-const PORT = process.env.PORT || 3100;
+const PORT = process.env.PORT || 3000;
 const axios = require("axios")
 const { getBuffer, fetchJson, tanggal, capital } = require('./function/function.js')  
 const { groq } = require("./function/openai.js")
@@ -85,7 +85,7 @@ app.get('/api/orkut/createpayment', async (req, res) => {
         // Respond with the structure from contoh.json
         res.status(200).json({
             statusCode: 200,
-            creator: "Act - DigitalShop", // Using creator from contoh.json
+            creator: "Ranz - DigitalShop", // Using creator from contoh.json
             data: paymentData, // paymentData already matches the 'data' structure
             message: "QRIS generated successfully"
         });
@@ -101,7 +101,7 @@ app.get('/api/orkut/cekstatus', async (req, res) => {
     if (!merchant) {
         return res.status(400).json({ // Use 400 for bad request
             statusCode: 400,
-            creator: "Act - DigitalShop",
+            creator: "Ranz - DigitalShop",
             data: null,
             message: "Isi Parameter Merchant."
         });
@@ -109,7 +109,7 @@ app.get('/api/orkut/cekstatus', async (req, res) => {
     if (!keyorkut) {
         return res.status(400).json({ // Use 400 for bad request
             statusCode: 400,
-            creator: "Act - DigitalShop",
+            creator: "Ranz - DigitalShop",
             data: null,
             message: "Isi Parameter Keyorkut."
         });
@@ -126,7 +126,7 @@ app.get('/api/orkut/cekstatus', async (req, res) => {
         // Respond with the structure like contoh.json
         res.status(200).json({
             statusCode: 200,
-            creator: "Act - DigitalShop", // Using creator from contoh.json
+            creator: "Ranz - DigitalShop", // Using creator from contoh.json
             data: statusData, // statusData contains the transaction details
             message: message
         });
@@ -134,7 +134,7 @@ app.get('/api/orkut/cekstatus', async (req, res) => {
         console.error("Error checking status:", error); // Log the actual error
         res.status(500).json({
             statusCode: 500,
-            creator: "Act - DigitalShop",
+            creator: "Ranz - DigitalShop",
             data: null,
             message: error.message || "Internal Server Error"
         });
@@ -143,12 +143,8 @@ app.get('/api/orkut/cekstatus', async (req, res) => {
 
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'landing.html'));
-});
-
-app.get('/docs', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+res.sendFile(path.join(__dirname, 'index.html'));
+})
 
 
 app.get("/api/ai/openai-prompt", async (req, res) => {
@@ -1331,112 +1327,73 @@ const json = {
 })
 
 app.get("/api/pterodactyl/delete", async (req, res) => {
-    let { domain, ptla, idserver } = req.query;
-    if (!domain || !ptla || !idserver) return res.status(400).json({ message: "Isi semua parameter: domain, ptla, idserver!" });
+let { domain, ptla, idserver } = req.query
+if (!domain || !ptla || !idserver) return res.json("Isi Parameternya!")
+domain = "https://" + domain
+let text = idserver
+let apikey = ptla
+let f = await fetch(domain + "/api/application/servers?page=1", {
+"method": "GET",
+"headers": {
+"Accept": "application/json",
+"Content-Type": "application/json",
+"Authorization": "Bearer " + apikey
+}
+})
+let result = await f.json()
+let servers = result.data
+let sections
+let nameSrv
+for (let server of servers) {
+let s = server.attributes
+if (Number(text) == s.id) {
+sections = s.name.toLowerCase()
+nameSrv = s.name
+let f = await fetch(domain + `/api/application/servers/${s.id}`, {
+"method": "DELETE",
+"headers": {
+"Accept": "application/json",
+"Content-Type": "application/json",
+"Authorization": "Bearer " + apikey,
+}
+})
+let res = f.ok ? {
+errors: null
+} : await f.json()
+}}
+let cek = await fetch(domain + "/api/application/users?page=1", {
+"method": "GET",
+"headers": {
+"Accept": "application/json",
+"Content-Type": "application/json",
+"Authorization": "Bearer " + apikey
+}
+})
+let res2 = await cek.json();
+let users = res2.data;
+for (let user of users) {
+let u = user.attributes
+if (u.first_name.toLowerCase() == sections) {
+let delusr = await fetch(domain + `/api/application/users/${u.id}`, {
+"method": "DELETE",
+"headers": {
+"Accept": "application/json",
+"Content-Type": "application/json",
+"Authorization": "Bearer " + apikey
+}
+})
+let res = delusr.ok ? {
+errors: null
+} : await delusr.json()
+}}
+if (sections == undefined) return res.json("Gagal menghapus server!\nID server tidak ditemukan")
+return res.json({
+status: true, 
+creator: global.creator, 
+result: `Sukses menghapus server panel *${capital(nameSrv)}*`
+})
 
-    const originalDomain = domain;
-    domain = domain.startsWith("http") ? domain : "https://" + domain;
-    const serverIdNum = Number(idserver);
-
-    if (isNaN(serverIdNum)) {
-        return res.status(400).json({ message: "idserver harus berupa angka." });
-    }
-
-    let pteroAuthHeaders = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + ptla
-    };
-
-    let foundServerAttributes = null;
-
-    try {
-        // 1. List Servers to find the server by ID
-        const listServersResponse = await fetch(`${domain}/api/application/servers?page=1`, {
-            method: "GET",
-            headers: pteroAuthHeaders
-        });
-
-        if (!listServersResponse.ok) {
-            const errorText = await listServersResponse.text();
-            console.error(`Pterodactyl API Error (listing servers ${listServersResponse.status}): ${errorText}`);
-            return res.status(listServersResponse.status).json({ message: "Error listing servers from Pterodactyl panel.", details: errorText });
-        }
-
-        const listResult = await listServersResponse.json();
-        let servers = listResult.data || [];
-
-        for (let server of servers) {
-            if (server.attributes && server.attributes.id === serverIdNum) {
-                foundServerAttributes = server.attributes;
-                break;
-            }
-        }
-
-        if (!foundServerAttributes) {
-            return res.status(404).json({ message: `Server dengan ID ${serverIdNum} tidak ditemukan.` });
-        }
-
-        // 2. Delete the found server
-        const deleteServerResponse = await fetch(`${domain}/api/application/servers/${foundServerAttributes.id}`, {
-            method: "DELETE",
-            headers: pteroAuthHeaders
-        });
-
-        if (!deleteServerResponse.ok) {
-            // Log error but proceed to user deletion as per original logic intent
-            const errorText = await deleteServerResponse.text();
-            console.warn(`Pterodactyl API Warning (deleting server ${foundServerAttributes.id} - ${deleteServerResponse.status}): ${errorText}`);
-        }
-        // Successful DELETE often returns 204 No Content, no body to parse.
-
-        // 3. List Users to find a matching user (if server name was intended for this)
-        // The original logic matched user.first_name.toLowerCase() with server.name.toLowerCase()
-        const serverNameForUserMatch = foundServerAttributes.name ? foundServerAttributes.name.toLowerCase() : null;
-
-        if (serverNameForUserMatch) { // Only proceed if server had a name to match
-            const listUsersResponse = await fetch(`${domain}/api/application/users?page=1`, {
-                method: "GET",
-                headers: pteroAuthHeaders
-            });
-
-            if (!listUsersResponse.ok) {
-                const errorText = await listUsersResponse.text();
-                console.warn(`Pterodactyl API Warning (listing users ${listUsersResponse.status}): ${errorText}. Skipping user deletion.`);
-            } else {
-                const usersResult = await listUsersResponse.json();
-                let users = usersResult.data || [];
-
-                for (let user of users) {
-                    if (user.attributes && typeof user.attributes.first_name === 'string' && 
-                        user.attributes.first_name.toLowerCase() === serverNameForUserMatch) {
-                        
-                        const deleteUserResponse = await fetch(`${domain}/api/application/users/${user.attributes.id}`, {
-                            method: "DELETE",
-                            headers: pteroAuthHeaders
-                        });
-                        if (!deleteUserResponse.ok) {
-                            const errorText = await deleteUserResponse.text();
-                            console.warn(`Pterodactyl API Warning (deleting user ${user.attributes.id} - ${deleteUserResponse.status}): ${errorText}`);
-                        }
-                        // Found and attempted to delete the user, break if only one such user is expected
-                        break; 
-                    }
-                }
-            }
-        }
-
-        return res.json({
-            status: true,
-            creator: global.creator, // Assuming global.creator is defined
-            result: `Sukses memulai proses penghapusan untuk server panel *${capital(foundServerAttributes.name || 'N/A')}*`
-        });
-
-    } catch (error) {
-        console.error("Error in /api/pterodactyl/delete handler:", error);
-        return res.status(500).json({ message: "Internal server error processing Pterodactyl delete request.", details: error.message });
-    }
-});
+})
 
 app.get("/api/pterodactyl/create", async (req, res) => {
 let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query
@@ -1559,4 +1516,6 @@ res.send("Hello World :)")
 app.listen(PORT, () => {
   console.log(`Server Telah Berjalan > http://localhost:${PORT}`)
 })
+
+
 
