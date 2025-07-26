@@ -1440,7 +1440,8 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 
 app.get("/api/pterodactyl/create", async (req, res) => {
   const crypto = require("crypto");
-  const fetch = require("node-fetch"); // pastikan ini terinstall
+  const fetch = require("node-fetch");
+
   let {
     domain,
     ptla,
@@ -1453,10 +1454,11 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     cpu,
     username,
     version,
-    node // ✅ tambahkan support untuk node
+    node,
+    password
   } = req.query;
 
-  if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
+  if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username || !node) {
     return res.json({ status: false, error: "Isi semua parameter!" });
   }
 
@@ -1464,13 +1466,12 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     domain = domain.startsWith("http") ? domain : "https://" + domain;
     const apikey = ptla;
     const email = username.toLowerCase() + "@gmail.com";
-    const generatedPassword = username + crypto.randomBytes(3).toString("hex");
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
 
     let user = null;
     let usr_id = null;
-    let finalPassword = generatedPassword;
+    let finalPassword = password || (username + crypto.randomBytes(3).toString("hex"));
 
     // 🔍 Cek user by email
     const emailRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
@@ -1487,7 +1488,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     if (emailData.data.length > 0) {
       user = emailData.data[0].attributes;
       usr_id = user.id;
-      finalPassword = null; // ❌ jangan ganti password
+      finalPassword = null; // ❌ jangan ubah password
     } else {
       // 🔍 Cek user by username
       const usernameRes = await fetch(`${domain}/api/application/users?filter[username]=${encodeURIComponent(username.toLowerCase())}`, {
@@ -1504,7 +1505,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       if (usernameData.data.length > 0) {
         user = usernameData.data[0].attributes;
         usr_id = user.id;
-        finalPassword = null; // ❌ jangan ganti password
+        finalPassword = null;
       } else {
         // ✅ Buat user baru
         const createUserRes = await fetch(`${domain}/api/application/users`, {
@@ -1520,7 +1521,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             first_name: capital(username),
             last_name: "Server",
             language: "en",
-            password: generatedPassword,
+            password: finalPassword,
           }),
         });
 
@@ -1557,6 +1558,22 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       environment[key] = key === "BEDROCK_VERSION" ? (version || "1.21.0") : defaultVal || "";
     }
 
+    // 📡 Ambil allocation dari node
+    const allocRes = await fetch(`${domain}/api/application/nodes/${node}/allocations`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apikey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+
+    const allocData = await allocRes.json();
+    const available = allocData.data.find(a => a.attributes.assigned === false);
+    if (!available) return res.json({ status: false, error: "Tidak ada allocation yang tersedia di node ini." });
+
+    const allocation_id = available.attributes.id;
+
     // 🚀 Buat server
     const serverRes = await fetch(`${domain}/api/application/servers`, {
       method: "POST",
@@ -1591,7 +1608,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
           port_range: [],
         },
         allocation: {
-          default: parseInt(node) || undefined, // ✅ atur node jika ada
+          default: allocation_id,
         },
         start_on_completion: true,
       }),
@@ -1616,6 +1633,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         created_at: tanggal(Date.now()),
       },
     });
+
   } catch (error) {
     console.error("❌ Server creation error:", error);
     return res.json({ status: false, error: error.message || "Terjadi kesalahan internal." });
