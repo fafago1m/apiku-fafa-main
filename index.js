@@ -1455,11 +1455,23 @@ app.get("/api/pterodactyl/create", async (req, res) => {
 
         // 🔁 Ambil environment dari query string
         const environment = {};
-        for (let key in req.query) {
+        for (const key in req.query) {
             const match = key.match(/^environment\[(.+?)\]$/);
             if (match) {
-                environment[match[1]] = req.query[key];
+                const envKey = match[1];
+                environment[envKey] = req.query[key];
             }
+        }
+
+        // ❗ Pastikan BEDROCK_VERSION terisi jika pakai egg Bedrock
+        if (parseInt(eggid) === 16 && !environment.BEDROCK_VERSION) {
+            return res.status(422).json({
+                error: "The Bedrock Version variable field is required.",
+                meta: {
+                    source_field: "environment.BEDROCK_VERSION",
+                    rule: "required"
+                }
+            });
         }
 
         // 🔎 Cari user berdasarkan email
@@ -1473,7 +1485,9 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         });
 
         const userJson = await userFetch.json();
-        if (!userJson.data || userJson.data.length === 0) return res.json({ error: "User tidak ditemukan" });
+        if (!userJson.data || userJson.data.length === 0) {
+            return res.json({ error: "User tidak ditemukan" });
+        }
 
         const user = userJson.data[0].attributes;
         const usr_id = user.id;
@@ -1490,6 +1504,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
 
         const eggData = await eggFetch.json();
         const startup_cmd = eggData.attributes.startup;
+        const docker_image = eggData.attributes.docker_image;
 
         // 🚀 Buat server
         const createServer = await fetch(`${domain}/api/application/servers`, {
@@ -1500,11 +1515,11 @@ app.get("/api/pterodactyl/create", async (req, res) => {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                name: name,
+                name,
                 description: desc,
                 user: usr_id,
                 egg: parseInt(eggid),
-                docker_image: eggData.attributes.docker_image,
+                docker_image,
                 startup: startup_cmd,
                 environment: environment,
                 limits: {
@@ -1529,7 +1544,10 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         });
 
         const result = await createServer.json();
-        if (result.errors) return res.json({ error: result.errors[0].detail });
+
+        if (result.errors) {
+            return res.json({ error: result.errors[0].detail });
+        }
 
         const server = result.attributes;
 
@@ -1551,7 +1569,10 @@ app.get("/api/pterodactyl/create", async (req, res) => {
 
     } catch (error) {
         console.error("ERROR:", error);
-        res.status(500).json({ error: "Terjadi kesalahan pada server.", detail: error.message });
+        return res.status(500).json({
+            error: "Terjadi kesalahan pada server.",
+            detail: error.message
+        });
     }
 });
 
