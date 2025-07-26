@@ -1439,170 +1439,141 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 });
 
 app.get("/api/pterodactyl/create", async (req, res) => {
-  let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query;
+  const {
+    domain,
+    ptla,
+    ptlc,
+    eggid,
+    nestid,
+    ram,
+    disk,
+    cpu,
+    username,
+    email,
+    location, // fallback jika node tidak dikirim
+    node,
+    version // versi Bedrock
+  } = req.query;
 
-  if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
-    return res.json({ status: false, error: "Isi semua parameter!" });
+  if (!domain || !ptla || !ptlc || !eggid || !nestid || !ram || !disk || !cpu || !username || !email || !version) {
+    return res.json({ status: false, error: "Isi semua parameter yang diperlukan!" });
   }
 
-  try {
-    domain = domain.startsWith("http") ? domain : "https://" + domain;
-    const apikey = ptla;
-    const email = username.toLowerCase() + "@gmail.com";
+  const fetch = (await import("node-fetch")).default;
+  const crypto = await import("crypto");
+
+  let user = null;
+  let usr_id = null;
+  let usedPassword = null;
+
+  const panel_url = `${domain}/api/application/users?filter[email]=${email}`;
+  const panel_user = await fetch(panel_url, {
+    headers: {
+      Authorization: `Bearer ${ptla}`,
+      "Content-Type": "application/json",
+      Accept: "Application/vnd.pterodactyl.v1+json",
+    },
+  });
+
+  const panel_data = await panel_user.json();
+
+  if (panel_data.data.length === 0) {
     const password = username + crypto.randomBytes(3).toString("hex");
-    const name = capital(username) + " Server";
-    const desc = tanggal(Date.now());
+    const userData = {
+      username: username,
+      email: email,
+      first_name: username,
+      last_name: "Bedrock",
+      password: password,
+    };
 
-    let user = null;
-    let usr_id = null;
-
-    // 🔍 Cari user berdasarkan email
-    const emailRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apikey}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    });
-
-    const emailData = await emailRes.json();
-    if (emailData.errors) return res.json({ status: false, error: emailData.errors[0].detail });
-
-    if (emailData.data.length > 0) {
-      user = emailData.data[0].attributes;
-      usr_id = user.id;
-    } else {
-      // 🔍 Kalau belum ada user dengan email, cek username
-      const usernameRes = await fetch(`${domain}/api/application/users?filter[username]=${encodeURIComponent(username.toLowerCase())}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${apikey}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      });
-
-      const usernameData = await usernameRes.json();
-      if (usernameData.data.length > 0) {
-        user = usernameData.data[0].attributes;
-        usr_id = user.id;
-      } else {
-        // 👤 Buat user baru
-        const createUserRes = await fetch(`${domain}/api/application/users`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apikey}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            username: username.toLowerCase(),
-            email,
-            first_name: capital(username),
-            last_name: "Server",
-            language: "en",
-            password,
-          }),
-        });
-
-        const newUser = await createUserRes.json();
-        if (newUser.errors) return res.json({ status: false, error: newUser.errors[0].detail });
-
-        user = newUser.attributes;
-        usr_id = user.id;
-      }
-    }
-
-    // 📦 Ambil egg + variabel
-    const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}?include=variables`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apikey}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    });
-
-    const eggData = await eggRes.json();
-    if (eggData.errors || !eggData?.attributes) {
-      return res.json({ status: false, error: eggData.errors?.[0]?.detail || "Egg tidak ditemukan." });
-    }
-
-    const egg = eggData.attributes;
-    const startup_cmd = egg.startup || "./bedrock_server";
-    const envVars = eggData?.attributes?.relationships?.variables?.data || [];
-
-    // 🔧 Build environment
-    const environment = {};
-    for (const v of envVars) {
-      const key = v.attributes.env_variable;
-      const defaultVal = v.attributes.default_value;
-      environment[key] = (key === "BEDROCK_VERSION") ? "1.21.0" : defaultVal || "";
-    }
-
-    // 🚀 Buat server
-    const serverRes = await fetch(`${domain}/api/application/servers`, {
+    const createUserRes = await fetch(`${domain}/api/application/users`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apikey}`,
+        Authorization: `Bearer ${ptla}`,
         "Content-Type": "application/json",
-        Accept: "application/json",
+        Accept: "Application/vnd.pterodactyl.v1+json",
       },
-      body: JSON.stringify({
-        name,
-        description: desc,
-        user: usr_id,
-        egg: parseInt(eggid),
-        docker_image: egg.docker_image,
-        startup: startup_cmd,
-        environment,
-        limits: {
-          memory: parseInt(ram),
-          swap: 0,
-          disk: parseInt(disk),
-          io: 500,
-          cpu: parseInt(cpu),
-        },
-        feature_limits: {
-          databases: 5,
-          backups: 5,
-          allocations: 5,
-        },
-        deploy: {
-          locations: [parseInt(loc)],
-          dedicated_ip: false,
-          port_range: [],
-        },
-      }),
+      body: JSON.stringify(userData),
     });
 
-    const serverData = await serverRes.json();
-    if (serverData.errors) {
-      return res.json({ status: false, error: serverData.errors[0].detail });
+    const newUser = await createUserRes.json();
+
+    if (newUser.errors) {
+      return res.json({ status: false, error: newUser.errors[0].detail });
     }
 
-    return res.json({
-      status: true,
-      creator: global.creator || "System",
-      result: {
-        id_user: usr_id,
-        id_server: serverData.attributes.id,
-        username: user.username,
-        password: user.password || password,
-        ram,
-        disk,
-        cpu,
-        domain,
-        created_at: tanggal(Date.now()),
-      },
-    });
-
-  } catch (error) {
-    console.error("❌ Server creation error:", error);
-    return res.json({ status: false, error: error.message || "Terjadi kesalahan internal." });
+    user = newUser.attributes;
+    usr_id = user.id;
+    usedPassword = password;
+  } else {
+    user = panel_data.data[0].attributes;
+    usr_id = user.id;
   }
+
+  // Buat server name random
+  const randomString = crypto.randomBytes(2).toString("hex");
+  const serverName = `${username}-${randomString}`;
+  const serverShortDesc = `${username}'s Bedrock Server`;
+
+  const serverData = {
+    name: serverName,
+    user: usr_id,
+    egg: parseInt(eggid),
+    docker_image: "ghcr.io/parkervcp/yolks:minecraft_bedrock", // Bisa disesuaikan jika perlu
+    startup: "./bedrock_server",
+    environment: {
+      BEDROCK_VERSION: version,
+      SERVER_NAME: serverShortDesc,
+    },
+    limits: {
+      memory: parseInt(ram),
+      swap: 0,
+      disk: parseInt(disk),
+      io: 500,
+      cpu: parseInt(cpu),
+    },
+    feature_limits: {
+      databases: 1,
+      allocations: 1,
+    },
+    allocation: {
+      default: 0,
+    },
+    deploy: {
+      locations: [parseInt(node || location)],
+      dedicated_ip: false,
+      port_range: [],
+    },
+    start_on_completion: true,
+  };
+
+  const createServer = await fetch(`${domain}/api/application/servers`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ptlc}`,
+      "Content-Type": "application/json",
+      Accept: "Application/vnd.pterodactyl.v1+json",
+    },
+    body: JSON.stringify(serverData),
+  });
+
+  const serverResponse = await createServer.json();
+
+  if (serverResponse.errors) {
+    return res.json({ status: false, error: serverResponse.errors[0].detail });
+  }
+
+  return res.json({
+    status: true,
+    message: "Server berhasil dibuat!",
+    server: serverResponse.attributes.identifier,
+    username: username,
+    email: email,
+    password: usedPassword || "Password sudah pernah dibuat",
+  });
 });
+
 
 
 app.use((err, req, res, next) => {
