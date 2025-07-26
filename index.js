@@ -1440,35 +1440,35 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 
 app.get("/api/pterodactyl/create", async (req, res) => {
   let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query;
-
   if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
     return res.json({ status: false, error: "Isi semua parameter!" });
   }
 
   try {
-    domain = domain.startsWith("http") ? domain : "https://" + domain;
+    domain = "https://" + domain;
     const apikey = ptla;
-    const email = `${username.toLowerCase()}@gmail.com`;
-    const password = username + crypto.randomBytes(3).toString('hex');
+    const email = username.toLowerCase() + "@gmail.com";
+    const password = username + crypto.randomBytes(3).toString("hex");
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
 
-    // 🔍 Cek apakah user sudah ada berdasarkan email
-    const usersRes = await fetch(`${domain}/api/application/users?per_page=100&filter[email]=${email}`, {
+    // 🔍 Cek user dari Pterodactyl (pakai filter email)
+    const usersRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${apikey}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
     });
-    const usersData = await usersRes.json();
 
-    let user = usersData?.data?.[0]?.attributes;
+    const usersData = await usersRes.json();
+    let user = usersData.data?.[0]?.attributes;
     let usr_id = user?.id;
 
     // 👤 Jika belum ada, buat user baru
     if (!user) {
-      const createUser = await fetch(`${domain}/api/application/users`, {
+      const userRes = await fetch(`${domain}/api/application/users`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apikey}`,
@@ -1481,19 +1481,20 @@ app.get("/api/pterodactyl/create", async (req, res) => {
           first_name: capital(username),
           last_name: "Server",
           language: "en",
-          password
+          password,
         }),
       });
 
-      const userData = await createUser.json();
-      if (userData.errors) return res.json({ status: false, error: userData.errors[0].detail });
+      const newUserData = await userRes.json();
+      if (newUserData.errors) return res.json({ status: false, error: newUserData.errors[0].detail });
 
-      user = userData.attributes;
+      user = newUserData.attributes;
       usr_id = user.id;
     }
 
     // 🔄 Ambil detail egg
     const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${apikey}`,
         "Content-Type": "application/json",
@@ -1502,18 +1503,20 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     });
 
     const eggData = await eggRes.json();
-    const startup_cmd = eggData?.attributes?.startup || "./bedrock_server";
-    const environmentVars = eggData?.attributes?.variables || [];
+    if (!eggData?.attributes) return res.json({ status: false, error: "Egg tidak ditemukan." });
 
-    // 🧠 Siapkan environment variables
-    let environment = {};
+    const startup_cmd = eggData.attributes.startup || "./bedrock_server";
+    const environmentVars = eggData.attributes?.variables || [];
+
+    // 🔧 Siapkan environment variables
+    const environment = {};
     for (const variable of environmentVars) {
       environment[variable.env_variable] =
-        variable.env_variable === "BEDROCK_VERSION" ? "1.21.0" : variable.default_value || "";
+        variable.env_variable === "BEDROCK_VERSION" ? "1.21.0" : variable.default_value;
     }
 
     // 🧱 Buat server
-    const createServer = await fetch(`${domain}/api/application/servers`, {
+    const serverRes = await fetch(`${domain}/api/application/servers`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apikey}`,
@@ -1548,7 +1551,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       }),
     });
 
-    const serverData = await createServer.json();
+    const serverData = await serverRes.json();
     if (serverData.errors) return res.json({ status: false, error: serverData.errors[0].detail });
 
     return res.json({
@@ -1558,7 +1561,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         id_user: usr_id,
         id_server: serverData.attributes.id,
         username: user.username,
-        password: user.password || password, // hanya untuk user baru
+        password: user.password || password, // hanya tampilkan password jika baru
         ram,
         disk,
         cpu,
@@ -1566,12 +1569,12 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         created_at: tanggal(Date.now()),
       },
     });
-
   } catch (error) {
     console.error(error);
-    return res.json({ status: false, error: error.message || "Terjadi kesalahan saat membuat server" });
+    return res.json({ status: false, error: error.message || "Terjadi kesalahan internal." });
   }
 });
+
 
 
 app.use((err, req, res, next) => {
