@@ -1447,37 +1447,58 @@ app.get("/api/pterodactyl/create", async (req, res) => {
 
   try {
     const apikey = ptla;
-    domain = "https://" + domain.replace(/^https?:\/\//, ""); // pastikan https
+    domain = "https://" + domain.replace(/^https?:\/\//, "");
     username = username.toLowerCase();
     const email = `${username}@gmail.com`;
     const name = capital(username) + " Server";
     const password = username + crypto.randomBytes(3).toString("hex");
 
-    // Buat user
-    const f = await fetch(`${domain}/api/application/users`, {
-      method: "POST",
+    let usr_id = null;
+    let userObj = null;
+
+    // 1. Cari user berdasarkan email
+    const checkUser = await fetch(`${domain}/api/application/users?per_page=100&filter[email]=${email}`, {
+      method: "GET",
       headers: {
         "Accept": "application/json",
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apikey}`
-      },
-      body: JSON.stringify({
-        email,
-        username,
-        first_name: name,
-        last_name: "Server",
-        language: "en",
-        password
-      })
+      }
     });
 
-    const data = await f.json();
-    if (data.errors) return res.json({ status: false, error: data.errors[0] });
+    const userCheckData = await checkUser.json();
 
-    const user = data.attributes;
-    const usr_id = user.id;
+    if (userCheckData.data && userCheckData.data.length > 0) {
+      // User ditemukan
+      userObj = userCheckData.data[0].attributes;
+      usr_id = userObj.id;
+    } else {
+      // Buat user baru jika belum ada
+      const createUser = await fetch(`${domain}/api/application/users`, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apikey}`
+        },
+        body: JSON.stringify({
+          email,
+          username,
+          first_name: name,
+          last_name: "Server",
+          language: "en",
+          password
+        })
+      });
 
-    // Ambil data egg
+      const newUser = await createUser.json();
+      if (newUser.errors) return res.json({ status: false, error: newUser.errors[0] });
+
+      userObj = newUser.attributes;
+      usr_id = userObj.id;
+    }
+
+    // 2. Ambil data egg
     const f1 = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
       method: "GET",
       headers: {
@@ -1491,14 +1512,13 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     const startup_cmd = eggData.attributes.startup;
     const dockerImage = eggData.attributes.docker_image;
 
-    // Ambil default environment (misal BEDROCK_VERSION)
+    // 3. Environment variable (otomatis dari egg)
     let environment = {};
-    const variables = eggData.attributes.variables;
-    for (let v of variables) {
+    for (let v of eggData.attributes.variables) {
       environment[v.env_variable] = v.default_value || "latest";
     }
 
-    // Buat server
+    // 4. Buat server
     const f2 = await fetch(`${domain}/api/application/servers`, {
       method: "POST",
       headers: {
@@ -1544,8 +1564,8 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       result: {
         id_user: usr_id,
         id_server: server.id,
-        username: user.username,
-        password,
+        username: userObj.username,
+        password: password, // hanya berguna jika user baru
         ram,
         disk,
         cpu,
