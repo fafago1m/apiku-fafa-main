@@ -1440,7 +1440,21 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 
 app.get("/api/pterodactyl/create", async (req, res) => {
   const crypto = require("crypto");
-  let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username, version } = req.query;
+  const fetch = require("node-fetch"); // pastikan ini terinstall
+  let {
+    domain,
+    ptla,
+    ptlc,
+    loc,
+    eggid,
+    nestid,
+    ram,
+    disk,
+    cpu,
+    username,
+    version,
+    node // ✅ tambahkan support untuk node
+  } = req.query;
 
   if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
     return res.json({ status: false, error: "Isi semua parameter!" });
@@ -1450,15 +1464,15 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     domain = domain.startsWith("http") ? domain : "https://" + domain;
     const apikey = ptla;
     const email = username.toLowerCase() + "@gmail.com";
-    const defaultPassword = username + crypto.randomBytes(3).toString("hex");
+    const generatedPassword = username + crypto.randomBytes(3).toString("hex");
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
 
     let user = null;
     let usr_id = null;
-    let finalPassword = defaultPassword;
+    let finalPassword = generatedPassword;
 
-    // 🔍 Cek user berdasarkan email
+    // 🔍 Cek user by email
     const emailRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
       method: "GET",
       headers: {
@@ -1467,16 +1481,15 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         Accept: "application/json",
       },
     });
-
     const emailData = await emailRes.json();
     if (emailData.errors) return res.json({ status: false, error: emailData.errors[0].detail });
 
     if (emailData.data.length > 0) {
       user = emailData.data[0].attributes;
       usr_id = user.id;
-      finalPassword = null; // jangan ubah password kalau user sudah ada
+      finalPassword = null; // ❌ jangan ganti password
     } else {
-      // 🔍 Cek user berdasarkan username
+      // 🔍 Cek user by username
       const usernameRes = await fetch(`${domain}/api/application/users?filter[username]=${encodeURIComponent(username.toLowerCase())}`, {
         method: "GET",
         headers: {
@@ -1485,16 +1498,15 @@ app.get("/api/pterodactyl/create", async (req, res) => {
           Accept: "application/json",
         },
       });
-
       const usernameData = await usernameRes.json();
       if (usernameData.errors) return res.json({ status: false, error: usernameData.errors[0].detail });
 
       if (usernameData.data.length > 0) {
         user = usernameData.data[0].attributes;
         usr_id = user.id;
-        finalPassword = null; // jangan ubah password kalau user sudah ada
+        finalPassword = null; // ❌ jangan ganti password
       } else {
-        // 👤 Buat user baru
+        // ✅ Buat user baru
         const createUserRes = await fetch(`${domain}/api/application/users`, {
           method: "POST",
           headers: {
@@ -1508,7 +1520,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             first_name: capital(username),
             last_name: "Server",
             language: "en",
-            password: defaultPassword,
+            password: generatedPassword,
           }),
         });
 
@@ -1520,7 +1532,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       }
     }
 
-    // 📦 Ambil Egg dan Variabel
+    // 📦 Ambil Egg dan Variables
     const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}?include=variables`, {
       method: "GET",
       headers: {
@@ -1578,6 +1590,9 @@ app.get("/api/pterodactyl/create", async (req, res) => {
           dedicated_ip: false,
           port_range: [],
         },
+        allocation: {
+          default: parseInt(node) || undefined, // ✅ atur node jika ada
+        },
         start_on_completion: true,
       }),
     });
@@ -1592,7 +1607,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         id_user: usr_id,
         id_server: serverData.attributes.id,
         username: user.username,
-        password: finalPassword || "Tersimpan saat registrasi", // tampilkan password hanya kalau user baru
+        password: finalPassword || "Tersimpan saat registrasi",
         ram,
         disk,
         cpu,
