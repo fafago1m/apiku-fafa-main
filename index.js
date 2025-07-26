@@ -1453,7 +1453,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
 
-    // 🔍 Cek apakah user sudah ada
+    // 🔍 Cek user
     const usersRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
       method: "GET",
       headers: {
@@ -1471,7 +1471,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
 
     // 👤 Buat user jika belum ada
     if (!user) {
-      const userRes = await fetch(`${domain}/api/application/users`, {
+      const createUserRes = await fetch(`${domain}/api/application/users`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apikey}`,
@@ -1488,15 +1488,15 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         }),
       });
 
-      const newUserData = await userRes.json();
-      if (newUserData.errors) return res.json({ status: false, error: newUserData.errors[0].detail });
+      const newUser = await createUserRes.json();
+      if (newUser.errors) return res.json({ status: false, error: newUser.errors[0].detail });
 
-      user = newUserData.attributes;
+      user = newUser.attributes;
       usr_id = user.id;
     }
 
-    // 📦 Ambil detail egg
-    const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
+    // 📦 Ambil egg + variabel
+    const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}?include=variables`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${apikey}`,
@@ -1510,16 +1510,19 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       return res.json({ status: false, error: eggData.errors?.[0]?.detail || "Egg tidak ditemukan." });
     }
 
-    const startup_cmd = eggData.attributes.startup || "./bedrock_server";
-    const environmentVars = eggData.attributes.variables || [];
+    const egg = eggData.attributes;
+    const startup_cmd = egg.startup || "./bedrock_server";
+    const envVars = eggData?.attributes?.relationships?.variables?.data || [];
 
-    // 🔧 Siapkan environment variables (dengan fallback manual)
+    // 🔧 Environment dengan fallback wajib
     const environment = {};
-    for (const variable of environmentVars) {
-      if (variable.env_variable === "BEDROCK_VERSION") {
-        environment["BEDROCK_VERSION"] = "1.21.0"; // Versi default
+    for (const v of envVars) {
+      const key = v.attributes.env_variable;
+      const defaultVal = v.attributes.default_value;
+      if (key === "BEDROCK_VERSION") {
+        environment[key] = "1.21.0"; // bisa ubah sesuai input
       } else {
-        environment[variable.env_variable] = variable.default_value || "";
+        environment[key] = defaultVal || "";
       }
     }
 
@@ -1536,7 +1539,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         description: desc,
         user: usr_id,
         egg: parseInt(eggid),
-        docker_image: eggData.attributes.docker_image,
+        docker_image: egg.docker_image,
         startup: startup_cmd,
         environment,
         limits: {
@@ -1580,11 +1583,10 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Server creation error:", error);
+    console.error("❌ Server creation error:", error);
     return res.json({ status: false, error: error.message || "Terjadi kesalahan internal." });
   }
 });
-
 
 
 app.use((err, req, res, next) => {
