@@ -1437,23 +1437,25 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
         return res.status(500).json({ message: "Internal server error processing Pterodactyl delete request.", details: error.message });
     }
 });
+
 app.get("/api/pterodactyl/create", async (req, res) => {
     let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query;
 
-    // Validasi parameter dasar
+    // Validasi parameter utama
     if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
-        return res.status(400).json({ error: "Isi semua parameter yang diperlukan." });
+        return res.status(400).json({ error: "Isi semua parameter wajib: domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username." });
     }
 
     try {
         const apikey = ptla;
-        domain = "https://" + domain.replace(/^https?:\/\//, "");
+        const disknya = disk;
+        domain = domain.startsWith("http") ? domain : `https://${domain}`;
         username = username.toLowerCase();
         const email = `${username}@gmail.com`;
         const name = username.charAt(0).toUpperCase() + username.slice(1) + " Server";
         const desc = tanggal(Date.now());
 
-        // 🔁 Ambil semua variabel environment dari query string
+        // Ambil environment variables dari query
         const environment = {};
         for (const key in req.query) {
             const match = key.match(/^environment\[(.+?)\]$/);
@@ -1463,72 +1465,57 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             }
         }
 
-        // ✅ Debug (opsional)
-        console.log("🔧 ENVIRONMENT VARS:", environment);
-
-        // ❗ Validasi khusus Bedrock Egg
-        if (parseInt(eggid) === 16 && (!environment.BEDROCK_VERSION || environment.BEDROCK_VERSION.trim() === "")) {
-            return res.status(422).json({
-                error: "The Bedrock Version variable field is required.",
-                meta: {
-                    source_field: "environment.BEDROCK_VERSION",
-                    rule: "required"
-                }
-            });
-        }
-
-        // 🔍 Cari user berdasarkan email
+        // Ambil user
         const userFetch = await fetch(`${domain}/api/application/users?filter[email]=${email}`, {
             method: "GET",
             headers: {
-                "Authorization": `Bearer ${apikey}`,
                 "Accept": "application/json",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apikey}`
             }
         });
 
         const userJson = await userFetch.json();
         if (!userJson.data || userJson.data.length === 0) {
-            return res.status(404).json({ error: "User tidak ditemukan di panel." });
+            return res.status(404).json({ error: "User tidak ditemukan." });
         }
 
         const user = userJson.data[0].attributes;
         const usr_id = user.id;
 
-        // 📦 Ambil data Egg
+        // Ambil data Egg
         const eggFetch = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
             method: "GET",
             headers: {
-                "Authorization": `Bearer ${apikey}`,
                 "Accept": "application/json",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apikey}`
             }
         });
 
-        const eggData = await eggFetch.json();
-        const startup_cmd = eggData.attributes.startup;
-        const docker_image = eggData.attributes.docker_image;
+        const eggJson = await eggFetch.json();
+        const startup_cmd = eggJson.attributes.startup;
 
-        // 🚀 Buat server
+        // Kirim request untuk buat server
         const createServer = await fetch(`${domain}/api/application/servers`, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${apikey}`,
                 "Accept": "application/json",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apikey}`
             },
             body: JSON.stringify({
-                name,
+                name: name,
                 description: desc,
                 user: usr_id,
                 egg: parseInt(eggid),
-                docker_image,
+                docker_image: eggJson.attributes.docker_image,
                 startup: startup_cmd,
-                environment,
+                environment: environment,
                 limits: {
                     memory: parseInt(ram),
                     swap: 0,
-                    disk: parseInt(disk),
+                    disk: parseInt(disknya),
                     io: 500,
                     cpu: parseInt(cpu)
                 },
@@ -1549,11 +1536,13 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         const result = await createServer.json();
 
         if (result.errors) {
-            return res.status(500).json({ error: result.errors[0].detail || "Gagal membuat server." });
+            return res.status(422).json({
+                error: result.errors[0].detail,
+                meta: result.errors[0].meta || null
+            });
         }
 
         const server = result.attributes;
-
         return res.json({
             status: true,
             creator: global.creator || "anonymous",
@@ -1562,22 +1551,23 @@ app.get("/api/pterodactyl/create", async (req, res) => {
                 id_server: server.id,
                 username: user.username,
                 password: "User sudah ada",
-                ram,
-                disk,
-                cpu,
-                domain,
+                ram: ram,
+                disk: disknya,
+                cpu: cpu,
+                domain: domain,
                 created_at: tanggal(Date.now())
             }
         });
 
     } catch (error) {
-        console.error("❌ SERVER ERROR:", error);
-        return res.status(500).json({
-            error: "Terjadi kesalahan internal.",
+        console.error("Gagal membuat server:", error);
+        res.status(500).json({
+            error: "Terjadi kesalahan pada server.",
             detail: error.message
         });
     }
 });
+
 
 
 app.use((err, req, res, next) => {
