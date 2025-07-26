@@ -1442,6 +1442,9 @@ app.get("/api/pterodactyl/create", async (req, res) => {
   const crypto = require("crypto");
   const fetch = require("node-fetch");
 
+  const capital = (str) => str.charAt(0).toUpperCase() + str.slice(1); // jika belum ada
+  const tanggal = (d) => new Date(d).toLocaleString("id-ID");          // jika belum ada
+
   let {
     domain,
     ptla,
@@ -1488,9 +1491,8 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     if (emailData.data.length > 0) {
       user = emailData.data[0].attributes;
       usr_id = user.id;
-      finalPassword = null; // ❌ jangan ubah password
+      finalPassword = null;
     } else {
-      // 🔍 Cek user by username
       const usernameRes = await fetch(`${domain}/api/application/users?filter[username]=${encodeURIComponent(username.toLowerCase())}`, {
         method: "GET",
         headers: {
@@ -1507,7 +1509,6 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         usr_id = user.id;
         finalPassword = null;
       } else {
-        // ✅ Buat user baru
         const createUserRes = await fetch(`${domain}/api/application/users`, {
           method: "POST",
           headers: {
@@ -1550,7 +1551,6 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     const startup_cmd = egg.startup || "./bedrock_server";
     const envVars = eggData?.attributes?.relationships?.variables?.data || [];
 
-    // 🔧 Set environment
     const environment = {};
     for (const v of envVars) {
       const key = v.attributes.env_variable;
@@ -1574,7 +1574,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
 
     const allocation_id = available.attributes.id;
 
-    // 🚀 Buat server
+    // 🚀 Buat server TANPA `deploy`
     const serverRes = await fetch(`${domain}/api/application/servers`, {
       method: "POST",
       headers: {
@@ -1601,11 +1601,6 @@ app.get("/api/pterodactyl/create", async (req, res) => {
           databases: 5,
           backups: 5,
           allocations: 5,
-        },
-        deploy: {
-          locations: [parseInt(loc)],
-          dedicated_ip: false,
-          port_range: [],
         },
         allocation: {
           default: allocation_id,
