@@ -1438,14 +1438,8 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
     }
 });
 
-const crypto = require("crypto");
-const fetch = require("node-fetch");
-
-// Fungsi bantuan (ganti sesuai yang kamu punya)
-const capital = (str) => str.charAt(0).toUpperCase() + str.slice(1);
-const tanggal = (ms) => new Date(ms).toLocaleString("id-ID");
-
 app.get("/api/pterodactyl/create", async (req, res) => {
+  const crypto = require("crypto");
   let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username, version } = req.query;
 
   if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
@@ -1456,12 +1450,13 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     domain = domain.startsWith("http") ? domain : "https://" + domain;
     const apikey = ptla;
     const email = username.toLowerCase() + "@gmail.com";
-    let password = null; // Jangan generate dulu
+    const defaultPassword = username + crypto.randomBytes(3).toString("hex");
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
 
     let user = null;
     let usr_id = null;
+    let finalPassword = defaultPassword;
 
     // 🔍 Cek user berdasarkan email
     const emailRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
@@ -1477,9 +1472,9 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     if (emailData.errors) return res.json({ status: false, error: emailData.errors[0].detail });
 
     if (emailData.data.length > 0) {
-      // ✅ User sudah ada
       user = emailData.data[0].attributes;
       usr_id = user.id;
+      finalPassword = null; // jangan ubah password kalau user sudah ada
     } else {
       // 🔍 Cek user berdasarkan username
       const usernameRes = await fetch(`${domain}/api/application/users?filter[username]=${encodeURIComponent(username.toLowerCase())}`, {
@@ -1495,13 +1490,11 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       if (usernameData.errors) return res.json({ status: false, error: usernameData.errors[0].detail });
 
       if (usernameData.data.length > 0) {
-        // ✅ User sudah ada (by username)
         user = usernameData.data[0].attributes;
         usr_id = user.id;
+        finalPassword = null; // jangan ubah password kalau user sudah ada
       } else {
         // 👤 Buat user baru
-        password = username + crypto.randomBytes(3).toString("hex");
-
         const createUserRes = await fetch(`${domain}/api/application/users`, {
           method: "POST",
           headers: {
@@ -1515,7 +1508,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             first_name: capital(username),
             last_name: "Server",
             language: "en",
-            password,
+            password: defaultPassword,
           }),
         });
 
@@ -1527,7 +1520,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       }
     }
 
-    // 📦 Ambil Egg dan Variables
+    // 📦 Ambil Egg dan Variabel
     const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}?include=variables`, {
       method: "GET",
       headers: {
@@ -1538,15 +1531,13 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     });
 
     const eggData = await eggRes.json();
-    if (eggData.errors || !eggData.attributes) {
-      return res.json({ status: false, error: eggData.errors?.[0]?.detail || "Egg tidak ditemukan." });
-    }
-
     const egg = eggData.attributes;
+    if (!egg) return res.json({ status: false, error: "Egg tidak ditemukan atau tidak valid." });
+
     const startup_cmd = egg.startup || "./bedrock_server";
     const envVars = eggData?.attributes?.relationships?.variables?.data || [];
 
-    // 🔧 Set environment variables
+    // 🔧 Set environment
     const environment = {};
     for (const v of envVars) {
       const key = v.attributes.env_variable;
@@ -1601,7 +1592,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         id_user: usr_id,
         id_server: serverData.attributes.id,
         username: user.username,
-        password: password || "Password sudah ada di database", // hanya tampilkan jika baru
+        password: finalPassword || "Tersimpan saat registrasi", // tampilkan password hanya kalau user baru
         ram,
         disk,
         cpu,
@@ -1610,7 +1601,6 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         created_at: tanggal(Date.now()),
       },
     });
-
   } catch (error) {
     console.error("❌ Server creation error:", error);
     return res.json({ status: false, error: error.message || "Terjadi kesalahan internal." });
