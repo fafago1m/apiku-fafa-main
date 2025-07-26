@@ -1440,6 +1440,7 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 
 app.get("/api/pterodactyl/create", async (req, res) => {
   let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query;
+
   if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
     return res.json({ status: false, error: "Isi semua parameter!" });
   }
@@ -1452,7 +1453,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
 
-    // 🔍 Cek user dari Pterodactyl (pakai filter email)
+    // 🔍 Cek apakah user sudah ada
     const usersRes = await fetch(`${domain}/api/application/users?filter[email]=${encodeURIComponent(email)}`, {
       method: "GET",
       headers: {
@@ -1463,10 +1464,12 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     });
 
     const usersData = await usersRes.json();
+    if (usersData.errors) return res.json({ status: false, error: usersData.errors[0].detail });
+
     let user = usersData.data?.[0]?.attributes;
     let usr_id = user?.id;
 
-    // 👤 Jika belum ada, buat user baru
+    // 👤 Buat user jika belum ada
     if (!user) {
       const userRes = await fetch(`${domain}/api/application/users`, {
         method: "POST",
@@ -1492,7 +1495,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       usr_id = user.id;
     }
 
-    // 🔄 Ambil detail egg
+    // 📦 Ambil detail egg
     const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
       method: "GET",
       headers: {
@@ -1503,19 +1506,24 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     });
 
     const eggData = await eggRes.json();
-    if (!eggData?.attributes) return res.json({ status: false, error: "Egg tidak ditemukan." });
-
-    const startup_cmd = eggData.attributes.startup || "./bedrock_server";
-    const environmentVars = eggData.attributes?.variables || [];
-
-    // 🔧 Siapkan environment variables
-    const environment = {};
-    for (const variable of environmentVars) {
-      environment[variable.env_variable] =
-        variable.env_variable === "BEDROCK_VERSION" ? "1.21.0" : variable.default_value;
+    if (eggData.errors || !eggData?.attributes) {
+      return res.json({ status: false, error: eggData.errors?.[0]?.detail || "Egg tidak ditemukan." });
     }
 
-    // 🧱 Buat server
+    const startup_cmd = eggData.attributes.startup || "./bedrock_server";
+    const environmentVars = eggData.attributes.variables || [];
+
+    // 🔧 Siapkan environment variables (dengan fallback manual)
+    const environment = {};
+    for (const variable of environmentVars) {
+      if (variable.env_variable === "BEDROCK_VERSION") {
+        environment["BEDROCK_VERSION"] = "1.21.0"; // Versi default
+      } else {
+        environment[variable.env_variable] = variable.default_value || "";
+      }
+    }
+
+    // 🚀 Buat server
     const serverRes = await fetch(`${domain}/api/application/servers`, {
       method: "POST",
       headers: {
@@ -1552,16 +1560,18 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     });
 
     const serverData = await serverRes.json();
-    if (serverData.errors) return res.json({ status: false, error: serverData.errors[0].detail });
+    if (serverData.errors) {
+      return res.json({ status: false, error: serverData.errors[0].detail });
+    }
 
     return res.json({
       status: true,
-      creator: global.creator,
+      creator: global.creator || "System",
       result: {
         id_user: usr_id,
         id_server: serverData.attributes.id,
         username: user.username,
-        password: user.password || password, // hanya tampilkan password jika baru
+        password: user.password || password,
         ram,
         disk,
         cpu,
@@ -1570,7 +1580,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Server creation error:", error);
     return res.json({ status: false, error: error.message || "Terjadi kesalahan internal." });
   }
 });
