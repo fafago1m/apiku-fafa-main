@@ -1442,8 +1442,8 @@ app.get("/api/pterodactyl/create", async (req, res) => {
   const crypto = require("crypto");
   const fetch = require("node-fetch");
 
-  const capital = (str) => str.charAt(0).toUpperCase() + str.slice(1); // jika belum ada
-  const tanggal = (d) => new Date(d).toLocaleString("id-ID");          // jika belum ada
+  const capital = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+  const tanggal = (d) => new Date(d).toLocaleString("id-ID");
 
   let {
     domain,
@@ -1471,7 +1471,6 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     const email = username.toLowerCase() + "@gmail.com";
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
-
     let user = null;
     let usr_id = null;
     let finalPassword = password || (username + crypto.randomBytes(3).toString("hex"));
@@ -1491,8 +1490,9 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     if (emailData.data.length > 0) {
       user = emailData.data[0].attributes;
       usr_id = user.id;
-      finalPassword = null;
+      finalPassword = null; // Jangan ubah password user lama
     } else {
+      // 🔍 Cek user by username
       const usernameRes = await fetch(`${domain}/api/application/users?filter[username]=${encodeURIComponent(username.toLowerCase())}`, {
         method: "GET",
         headers: {
@@ -1509,6 +1509,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         usr_id = user.id;
         finalPassword = null;
       } else {
+        // ✅ Buat user baru
         const createUserRes = await fetch(`${domain}/api/application/users`, {
           method: "POST",
           headers: {
@@ -1545,9 +1546,9 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     });
 
     const eggData = await eggRes.json();
-    const egg = eggData.attributes;
-    if (!egg) return res.json({ status: false, error: "Egg tidak ditemukan atau tidak valid." });
+    if (!eggData.attributes) return res.json({ status: false, error: "Egg tidak ditemukan." });
 
+    const egg = eggData.attributes;
     const startup_cmd = egg.startup || "./bedrock_server";
     const envVars = eggData?.attributes?.relationships?.variables?.data || [];
 
@@ -1555,7 +1556,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     for (const v of envVars) {
       const key = v.attributes.env_variable;
       const defaultVal = v.attributes.default_value;
-      environment[key] = key === "BEDROCK_VERSION" ? (version || "1.21.0") : defaultVal || "";
+      environment[key] = key === "BEDROCK_VERSION" ? (version || "1.20.71") : defaultVal || "";
     }
 
     // 📡 Ambil allocation dari node
@@ -1574,7 +1575,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
 
     const allocation_id = available.attributes.id;
 
-    // 🚀 Buat server TANPA `deploy`
+    // 🚀 Buat server
     const serverRes = await fetch(`${domain}/api/application/servers`, {
       method: "POST",
       headers: {
