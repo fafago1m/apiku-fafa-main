@@ -1440,145 +1440,137 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 
 app.get("/api/pterodactyl/create", async (req, res) => {
   let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query;
-
   if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
-    return res.json({ status: false, message: "Isi semua parameter!" });
+    return res.json({ status: false, error: "Isi semua parameter!" });
   }
 
   try {
+    domain = "https://" + domain;
     const apikey = ptla;
-    domain = "https://" + domain.replace(/^https?:\/\//, "");
-    username = username.toLowerCase();
-    const email = `${username}@gmail.com`;
+    const capiley = ptlc;
+    const email = username.toLowerCase() + "@gmail.com";
+    const password = username + crypto.randomBytes(3).toString('hex');
     const name = capital(username) + " Server";
-    const password = username + crypto.randomBytes(3).toString("hex");
+    const desc = tanggal(Date.now());
 
-    let usr_id = null;
-    let userObj = null;
-
-    // 1. Cari user berdasarkan email
-    const checkUser = await fetch(`${domain}/api/application/users?per_page=100&filter[email]=${email}`, {
+    // 🔍 Cek apakah user sudah ada
+    const usersRes = await fetch(`${domain}/api/application/users?per_page=100`, {
       method: "GET",
       headers: {
-        "Accept": "application/json",
+        Authorization: `Bearer ${apikey}`,
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apikey}`
-      }
+        Accept: "application/json",
+      },
     });
+    const usersData = await usersRes.json();
+    const existingUser = usersData.data.find(u => u.attributes.username === username.toLowerCase());
 
-    const userCheckData = await checkUser.json();
+    let user = existingUser?.attributes;
+    let usr_id = user?.id;
 
-    if (userCheckData.data && userCheckData.data.length > 0) {
-      // User ditemukan
-      userObj = userCheckData.data[0].attributes;
-      usr_id = userObj.id;
-    } else {
-      // Buat user baru jika belum ada
+    // 👤 Jika belum ada, buat user
+    if (!user) {
       const createUser = await fetch(`${domain}/api/application/users`, {
         method: "POST",
         headers: {
-          "Accept": "application/json",
+          Authorization: `Bearer ${apikey}`,
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apikey}`
+          Accept: "application/json",
         },
         body: JSON.stringify({
+          username: username.toLowerCase(),
           email,
-          username,
-          first_name: name,
+          first_name: capital(username),
           last_name: "Server",
           language: "en",
           password
-        })
+        }),
       });
-
-      const newUser = await createUser.json();
-      if (newUser.errors) return res.json({ status: false, error: newUser.errors[0] });
-
-      userObj = newUser.attributes;
-      usr_id = userObj.id;
+      const userData = await createUser.json();
+      if (userData.errors) return res.json({ status: false, error: userData.errors[0].detail });
+      user = userData.attributes;
+      usr_id = user.id;
     }
 
-    // 2. Ambil data egg
-    const f1 = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
+    // 🔄 Ambil detail egg
+    const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
       method: "GET",
       headers: {
-        "Accept": "application/json",
+        Authorization: `Bearer ${apikey}`,
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apikey}`
-      }
+        Accept: "application/json",
+      },
     });
+    const eggData = await eggRes.json();
+    const startup_cmd = eggData?.attributes?.startup || "./bedrock_server";
+    const environmentVars = eggData?.attributes?.variables || [];
 
-    const eggData = await f1.json();
-    const startup_cmd = eggData.attributes.startup;
-    const dockerImage = eggData.attributes.docker_image;
-
-    // 3. Environment variable (otomatis dari egg)
+    // 🧠 Siapkan environment (BEDROCK_VERSION harus ada)
     let environment = {};
-    for (let v of eggData.attributes.variables) {
-      environment[v.env_variable] = v.default_value || "latest";
+    for (const variable of environmentVars) {
+      environment[variable.env_variable] = variable.env_variable === "BEDROCK_VERSION" ? "1.21.0" : variable.default_value;
     }
 
-    // 4. Buat server
-    const f2 = await fetch(`${domain}/api/application/servers`, {
+    // 🧱 Buat server
+    const createServer = await fetch(`${domain}/api/application/servers`, {
       method: "POST",
       headers: {
-        "Accept": "application/json",
+        Authorization: `Bearer ${apikey}`,
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apikey}`
+        Accept: "application/json",
       },
       body: JSON.stringify({
         name,
-        description: tanggal(Date.now()),
+        description: desc,
         user: usr_id,
         egg: parseInt(eggid),
-        docker_image: dockerImage,
+        docker_image: eggData.attributes.docker_image,
         startup: startup_cmd,
-        environment,
+        environment: environment,
         limits: {
           memory: parseInt(ram),
           swap: 0,
           disk: parseInt(disk),
           io: 500,
-          cpu: parseInt(cpu)
+          cpu: parseInt(cpu),
         },
         feature_limits: {
           databases: 5,
           backups: 5,
-          allocations: 5
+          allocations: 5,
         },
         deploy: {
           locations: [parseInt(loc)],
           dedicated_ip: false,
-          port_range: []
-        }
-      })
+          port_range: [],
+        },
+      }),
     });
 
-    const result = await f2.json();
-    if (result.errors) return res.json({ status: false, error: result.errors[0] });
+    const serverData = await createServer.json();
+    if (serverData.errors) return res.json({ status: false, error: serverData.errors[0].detail });
 
-    const server = result.attributes;
     return res.json({
       status: true,
-      creator: global.creator || "ACT STORE",
+      creator: global.creator,
       result: {
         id_user: usr_id,
-        id_server: server.id,
-        username: userObj.username,
-        password: password, // hanya berguna jika user baru
+        id_server: serverData.attributes.id,
+        username: user.username,
+        password: password, // hanya jika user baru
         ram,
         disk,
         cpu,
         domain,
-        created_at: tanggal(Date.now())
-      }
+        created_at: tanggal(Date.now()),
+      },
     });
-
   } catch (error) {
-    console.error("Server Creation Error:", error);
-    res.status(500).json({ status: false, error: error.message || "Terjadi kesalahan" });
+    console.error(error);
+    return res.json({ status: false, error: error.message });
   }
 });
+
 
 
 app.use((err, req, res, next) => {
