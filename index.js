@@ -1440,22 +1440,21 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 
 app.get("/api/pterodactyl/create", async (req, res) => {
   let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query;
+
   if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
     return res.json({ status: false, error: "Isi semua parameter!" });
   }
 
   try {
-    domain = "https://" + domain;
+    domain = domain.startsWith("http") ? domain : "https://" + domain;
     const apikey = ptla;
-    const capiley = ptlc;
-    const email = username.toLowerCase() + "@gmail.com";
+    const email = `${username.toLowerCase()}@gmail.com`;
     const password = username + crypto.randomBytes(3).toString('hex');
     const name = capital(username) + " Server";
     const desc = tanggal(Date.now());
 
-    // 🔍 Cek apakah user sudah ada
-    const usersRes = await fetch(`${domain}/api/application/users?per_page=100`, {
-      method: "GET",
+    // 🔍 Cek apakah user sudah ada berdasarkan email
+    const usersRes = await fetch(`${domain}/api/application/users?per_page=100&filter[email]=${email}`, {
       headers: {
         Authorization: `Bearer ${apikey}`,
         "Content-Type": "application/json",
@@ -1463,12 +1462,11 @@ app.get("/api/pterodactyl/create", async (req, res) => {
       },
     });
     const usersData = await usersRes.json();
-    const existingUser = usersData.data.find(u => u.attributes.username === username.toLowerCase());
 
-    let user = existingUser?.attributes;
+    let user = usersData?.data?.[0]?.attributes;
     let usr_id = user?.id;
 
-    // 👤 Jika belum ada, buat user
+    // 👤 Jika belum ada, buat user baru
     if (!user) {
       const createUser = await fetch(`${domain}/api/application/users`, {
         method: "POST",
@@ -1486,29 +1484,32 @@ app.get("/api/pterodactyl/create", async (req, res) => {
           password
         }),
       });
+
       const userData = await createUser.json();
       if (userData.errors) return res.json({ status: false, error: userData.errors[0].detail });
+
       user = userData.attributes;
       usr_id = user.id;
     }
 
     // 🔄 Ambil detail egg
     const eggRes = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
-      method: "GET",
       headers: {
         Authorization: `Bearer ${apikey}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
     });
+
     const eggData = await eggRes.json();
     const startup_cmd = eggData?.attributes?.startup || "./bedrock_server";
     const environmentVars = eggData?.attributes?.variables || [];
 
-    // 🧠 Siapkan environment (BEDROCK_VERSION harus ada)
+    // 🧠 Siapkan environment variables
     let environment = {};
     for (const variable of environmentVars) {
-      environment[variable.env_variable] = variable.env_variable === "BEDROCK_VERSION" ? "1.21.0" : variable.default_value;
+      environment[variable.env_variable] =
+        variable.env_variable === "BEDROCK_VERSION" ? "1.21.0" : variable.default_value || "";
     }
 
     // 🧱 Buat server
@@ -1526,7 +1527,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         egg: parseInt(eggid),
         docker_image: eggData.attributes.docker_image,
         startup: startup_cmd,
-        environment: environment,
+        environment,
         limits: {
           memory: parseInt(ram),
           swap: 0,
@@ -1557,7 +1558,7 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         id_user: usr_id,
         id_server: serverData.attributes.id,
         username: user.username,
-        password: password, // hanya jika user baru
+        password: user.password || password, // hanya untuk user baru
         ram,
         disk,
         cpu,
@@ -1565,12 +1566,12 @@ app.get("/api/pterodactyl/create", async (req, res) => {
         created_at: tanggal(Date.now()),
       },
     });
+
   } catch (error) {
     console.error(error);
-    return res.json({ status: false, error: error.message });
+    return res.json({ status: false, error: error.message || "Terjadi kesalahan saat membuat server" });
   }
 });
-
 
 
 app.use((err, req, res, next) => {
