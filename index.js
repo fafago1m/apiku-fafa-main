@@ -1446,85 +1446,71 @@ app.get("/api/pterodactyl/create", async (req, res) => {
     }
 
     try {
-        let apikey = ptla;
-        let capiley = ptlc;
-        let disknya = disk;
-        domain = "https://" + domain;
+        const apikey = ptla;
+        domain = "https://" + domain.replace(/^https?:\/\//, "");
         username = username.toLowerCase();
-        let email = username + "@gmail.com";
-        let name = username.charAt(0).toUpperCase() + username.slice(1) + " Server";
-        let desc = tanggal(Date.now());
+        const email = `${username}@gmail.com`;
+        const name = username.charAt(0).toUpperCase() + username.slice(1) + " Server";
+        const desc = tanggal(Date.now());
 
-        // Build environment variable dari default
-        const environment = {
-            INST: "npm",
-            USER_UPLOAD: "0",
-            AUTO_UPDATE: "0",
-            CMD_RUN: "npm start"
-        };
-
-        // Tambahkan environment dari query string seperti environment[BEDROCK_VERSION]
+        // 🔁 Ambil environment dari query string
+        const environment = {};
         for (let key in req.query) {
-            if (key.startsWith("environment[")) {
-                const match = key.match(/environment\[(.+?)\]/);
-                if (match && match[1]) {
-                    const envKey = match[1];
-                    environment[envKey] = req.query[key];
-                }
+            const match = key.match(/^environment\[(.+?)\]$/);
+            if (match) {
+                environment[match[1]] = req.query[key];
             }
         }
 
-        console.log("Final Environment:", environment); // DEBUG
-
-        // Cari user berdasarkan email
-        let userFetch = await fetch(`${domain}/api/application/users?filter[email]=${email}`, {
+        // 🔎 Cari user berdasarkan email
+        const userFetch = await fetch(`${domain}/api/application/users?filter[email]=${email}`, {
             method: "GET",
             headers: {
+                "Authorization": "Bearer " + apikey,
                 "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + apikey
+                "Content-Type": "application/json"
             }
         });
 
-        let userJson = await userFetch.json();
+        const userJson = await userFetch.json();
         if (!userJson.data || userJson.data.length === 0) return res.json({ error: "User tidak ditemukan" });
 
-        let user = userJson.data[0].attributes;
-        let usr_id = user.id;
+        const user = userJson.data[0].attributes;
+        const usr_id = user.id;
 
-        // Ambil data Egg
-        let f1 = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
+        // 🥚 Ambil data Egg
+        const eggFetch = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
             method: "GET",
             headers: {
+                "Authorization": "Bearer " + apikey,
                 "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + apikey
+                "Content-Type": "application/json"
             }
         });
 
-        let data2 = await f1.json();
-        let startup_cmd = data2.attributes.startup;
+        const eggData = await eggFetch.json();
+        const startup_cmd = eggData.attributes.startup;
 
-        // Buat server
-        let f2 = await fetch(`${domain}/api/application/servers`, {
+        // 🚀 Buat server
+        const createServer = await fetch(`${domain}/api/application/servers`, {
             method: "POST",
             headers: {
+                "Authorization": "Bearer " + apikey,
                 "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + apikey
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 name: name,
                 description: desc,
                 user: usr_id,
                 egg: parseInt(eggid),
-                docker_image: data2.attributes.docker_image,
+                docker_image: eggData.attributes.docker_image,
                 startup: startup_cmd,
                 environment: environment,
                 limits: {
                     memory: parseInt(ram),
                     swap: 0,
-                    disk: parseInt(disknya),
+                    disk: parseInt(disk),
                     io: 500,
                     cpu: parseInt(cpu)
                 },
@@ -1542,10 +1528,11 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             })
         });
 
-        let result = await f2.json();
+        const result = await createServer.json();
         if (result.errors) return res.json({ error: result.errors[0].detail });
 
-        let server = result.attributes;
+        const server = result.attributes;
+
         return res.json({
             status: true,
             creator: global.creator || "anonymous",
@@ -1554,17 +1541,17 @@ app.get("/api/pterodactyl/create", async (req, res) => {
                 id_server: server.id,
                 username: user.username,
                 password: "User sudah ada",
-                ram: ram,
-                disk: disknya,
-                cpu: cpu,
-                domain: `${domain}`,
+                ram,
+                disk,
+                cpu,
+                domain,
                 created_at: tanggal(Date.now())
             }
         });
 
     } catch (error) {
         console.error("ERROR:", error);
-        res.send({ error: "Terjadi kesalahan pada server.", detail: error.message });
+        res.status(500).json({ error: "Terjadi kesalahan pada server.", detail: error.message });
     }
 });
 
