@@ -1439,139 +1439,94 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 });
 
 app.get("/api/pterodactyl/create", async (req, res) => {
-  const {
-    domain,
-    ptla,
-    ptlc,
-    eggid,
-    nestid,
-    ram,
-    disk,
-    cpu,
-    username,
-    email,
-    location, // fallback jika node tidak dikirim
-    node,
-    version // versi Bedrock
-  } = req.query;
-
-  if (!domain || !ptla || !ptlc || !eggid || !nestid || !ram || !disk || !cpu || !username || !email || !version) {
-    return res.json({ status: false, error: "Isi semua parameter yang diperlukan!" });
-  }
-
-  const fetch = (await import("node-fetch")).default;
-  const crypto = await import("crypto");
-
-  let user = null;
-  let usr_id = null;
-  let usedPassword = null;
-
-  const panel_url = `${domain}/api/application/users?filter[email]=${email}`;
-  const panel_user = await fetch(panel_url, {
-    headers: {
-      Authorization: `Bearer ${ptla}`,
-      "Content-Type": "application/json",
-      Accept: "Application/vnd.pterodactyl.v1+json",
-    },
-  });
-
-  const panel_data = await panel_user.json();
-
-  if (panel_data.data.length === 0) {
-    const password = username + crypto.randomBytes(3).toString("hex");
-    const userData = {
-      username: username,
-      email: email,
-      first_name: username,
-      last_name: "Bedrock",
-      password: password,
-    };
-
-    const createUserRes = await fetch(`${domain}/api/application/users`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${ptla}`,
-        "Content-Type": "application/json",
-        Accept: "Application/vnd.pterodactyl.v1+json",
-      },
-      body: JSON.stringify(userData),
-    });
-
-    const newUser = await createUserRes.json();
-
-    if (newUser.errors) {
-      return res.json({ status: false, error: newUser.errors[0].detail });
+  try {
+    const { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username, email, node, version } = req.query;
+    
+    if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username || !email || !node || !version) {
+      return res.json({ status: false, error: "Ada parameter yang belum diisi." });
     }
 
-    user = newUser.attributes;
-    usr_id = user.id;
-    usedPassword = password;
-  } else {
-    user = panel_data.data[0].attributes;
-    usr_id = user.id;
+    // Cek apakah user sudah ada
+    const checkUser = await axios.get(`${domain}/api/application/users?filter[email]=${email}`, {
+      headers: {
+        'Authorization': `Bearer ${ptla}`,
+        'Content-Type': 'application/json',
+        'Accept': 'Application/vnd.pterodactyl.v1+json'
+      }
+    });
+
+    let userId;
+    if (checkUser.data.data.length > 0) {
+      userId = checkUser.data.data[0].attributes.id;
+    } else {
+      // Buat user baru
+      const createUser = await axios.post(`${domain}/api/application/users`, {
+        username,
+        email,
+        first_name: username,
+        last_name: "User",
+        password: "fafa9bcc75"
+      }, {
+        headers: {
+          'Authorization': `Bearer ${ptla}`,
+          'Content-Type': 'application/json',
+          'Accept': 'Application/vnd.pterodactyl.v1+json'
+        }
+      });
+      userId = createUser.data.attributes.id;
+    }
+
+    // Buat server
+    const createServer = await axios.post(`${domain}/api/application/servers`, {
+      name: username,
+      user: userId,
+      egg: eggid,
+      docker_image: `ghcr.io/pterodactyl/yolks:bedrock_${version}`, // contoh: 1.20.71
+      startup: "LD_LIBRARY_PATH=. ./bedrock_server",
+      environment: {
+        BEDROCK_VERSION: version,
+        SERVER_NAME: username
+      },
+      limits: {
+        memory: parseInt(ram),
+        swap: 0,
+        disk: parseInt(disk),
+        io: 500,
+        cpu: parseInt(cpu)
+      },
+      feature_limits: {
+        databases: 0,
+        backups: 0,
+        allocations: 1
+      },
+      allocation: {
+        default: parseInt(loc)
+      },
+      deploy: {
+        locations: [parseInt(node)],
+        dedicated_ip: false,
+        port_range: []
+      }
+    }, {
+      headers: {
+        'Authorization': `Bearer ${ptla}`,
+        'Content-Type': 'application/json',
+        'Accept': 'Application/vnd.pterodactyl.v1+json'
+      }
+    });
+
+    return res.json({
+      status: true,
+      server: createServer.data
+    });
+
+  } catch (err) {
+    console.error(err?.response?.data || err.message);
+    return res.json({
+      status: false,
+      error: err?.response?.data?.errors?.[0]?.detail || err.message
+    });
   }
-
-  // Buat server name random
-  const randomString = crypto.randomBytes(2).toString("hex");
-  const serverName = `${username}-${randomString}`;
-  const serverShortDesc = `${username}'s Bedrock Server`;
-
-  const serverData = {
-    name: serverName,
-    user: usr_id,
-    egg: parseInt(eggid),
-    docker_image: "ghcr.io/parkervcp/yolks:minecraft_bedrock", // Bisa disesuaikan jika perlu
-    startup: "./bedrock_server",
-    environment: {
-      BEDROCK_VERSION: version,
-      SERVER_NAME: serverShortDesc,
-    },
-    limits: {
-      memory: parseInt(ram),
-      swap: 0,
-      disk: parseInt(disk),
-      io: 500,
-      cpu: parseInt(cpu),
-    },
-    feature_limits: {
-      databases: 1,
-      allocations: 1,
-    },
-    allocation: {
-      default: 0,
-    },
-    deploy: {
-      locations: [parseInt(node || location)],
-      dedicated_ip: false,
-      port_range: [],
-    },
-    start_on_completion: true,
-  };
-
-  const createServer = await fetch(`${domain}/api/application/servers`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${ptlc}`,
-      "Content-Type": "application/json",
-      Accept: "Application/vnd.pterodactyl.v1+json",
-    },
-    body: JSON.stringify(serverData),
-  });
-
-  const serverResponse = await createServer.json();
-
-  if (serverResponse.errors) {
-    return res.json({ status: false, error: serverResponse.errors[0].detail });
-  }
-
-  return res.json({
-    status: true,
-    message: "Server berhasil dibuat!",
-    server: serverResponse.attributes.identifier,
-    username: username,
-    email: email,
-    password: usedPassword || "Password sudah pernah dibuat",
-  });
 });
 
 
