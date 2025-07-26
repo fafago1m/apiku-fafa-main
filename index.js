@@ -1441,59 +1441,29 @@ app.get("/api/pterodactyl/delete", async (req, res) => {
 app.get("/api/pterodactyl/create", async (req, res) => {
     let { domain, ptla, ptlc, loc, eggid, nestid, ram, disk, cpu, username } = req.query;
 
-    // Validasi parameter wajib
     if (!domain || !ptla || !ptlc || !loc || !eggid || !nestid || !ram || !disk || !cpu || !username) {
-        return res.json("Isi Parameternya!");
+        return res.json({ error: "Isi Parameternya!" });
     }
 
     try {
-        const apikey = ptla;
-        const capiley = ptlc;
-        const disknya = disk;
-        const fullDomain = `https://${domain}`;
-        const email = `${username.toLowerCase()}@gmail.com`;
-        const name = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase() + " Server";
-        const desc = tanggal(Date.now());
+        let apikey = ptla;
+        let capiley = ptlc;
+        let disknya = disk;
+        domain = "https://" + domain;
+        username = username.toLowerCase();
+        let email = username + "@gmail.com";
+        let name = username.charAt(0).toUpperCase() + username.slice(1) + " Server";
+        let desc = tanggal(Date.now());
 
-        // Ambil user dari email
-        const userFetch = await fetch(`${fullDomain}/api/application/users?filter[email]=${email}`, {
-            method: "GET",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apikey}`
-            }
-        });
-
-        const userJson = await userFetch.json();
-        if (!userJson.data || userJson.data.length === 0)
-            return res.json({ error: "User tidak ditemukan" });
-
-        const user = userJson.data[0].attributes;
-        const usr_id = user.id;
-
-        // Ambil data egg
-        const eggFetch = await fetch(`${fullDomain}/api/application/nests/${nestid}/eggs/${eggid}`, {
-            method: "GET",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apikey}`
-            }
-        });
-
-        const eggJson = await eggFetch.json();
-        const startup_cmd = eggJson.attributes.startup;
-
-        // Bangun object environment dari query string
+        // Build environment variable dari default
         const environment = {
-            "INST": "npm",
-            "USER_UPLOAD": "0",
-            "AUTO_UPDATE": "0",
-            "CMD_RUN": "npm start"
+            INST: "npm",
+            USER_UPLOAD: "0",
+            AUTO_UPDATE: "0",
+            CMD_RUN: "npm start"
         };
 
-        // Tambahkan semua key environment dari query seperti environment[KEY]=value
+        // Tambahkan environment dari query string seperti environment[BEDROCK_VERSION]
         for (let key in req.query) {
             if (key.startsWith("environment[")) {
                 const match = key.match(/environment\[(.+?)\]/);
@@ -1504,20 +1474,51 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             }
         }
 
-        // Buat server baru
-        const serverCreate = await fetch(`${fullDomain}/api/application/servers`, {
+        console.log("Final Environment:", environment); // DEBUG
+
+        // Cari user berdasarkan email
+        let userFetch = await fetch(`${domain}/api/application/users?filter[email]=${email}`, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + apikey
+            }
+        });
+
+        let userJson = await userFetch.json();
+        if (!userJson.data || userJson.data.length === 0) return res.json({ error: "User tidak ditemukan" });
+
+        let user = userJson.data[0].attributes;
+        let usr_id = user.id;
+
+        // Ambil data Egg
+        let f1 = await fetch(`${domain}/api/application/nests/${nestid}/eggs/${eggid}`, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + apikey
+            }
+        });
+
+        let data2 = await f1.json();
+        let startup_cmd = data2.attributes.startup;
+
+        // Buat server
+        let f2 = await fetch(`${domain}/api/application/servers`, {
             method: "POST",
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${apikey}`
+                "Authorization": "Bearer " + apikey
             },
             body: JSON.stringify({
                 name: name,
                 description: desc,
                 user: usr_id,
                 egg: parseInt(eggid),
-                docker_image: eggJson.attributes.docker_image,
+                docker_image: data2.attributes.docker_image,
                 startup: startup_cmd,
                 environment: environment,
                 limits: {
@@ -1541,13 +1542,10 @@ app.get("/api/pterodactyl/create", async (req, res) => {
             })
         });
 
-        const result = await serverCreate.json();
-        if (result.errors) {
-            return res.json(JSON.stringify(result.errors[0], null, 2));
-        }
+        let result = await f2.json();
+        if (result.errors) return res.json({ error: result.errors[0].detail });
 
-        const server = result.attributes;
-
+        let server = result.attributes;
         return res.json({
             status: true,
             creator: global.creator || "anonymous",
@@ -1559,17 +1557,14 @@ app.get("/api/pterodactyl/create", async (req, res) => {
                 ram: ram,
                 disk: disknya,
                 cpu: cpu,
-                domain: fullDomain,
+                domain: `${domain}`,
                 created_at: tanggal(Date.now())
             }
         });
 
     } catch (error) {
-        console.error(error);
-        return res.json({
-            error: "Terjadi kesalahan pada server.",
-            detail: error.message
-        });
+        console.error("ERROR:", error);
+        res.send({ error: "Terjadi kesalahan pada server.", detail: error.message });
     }
 });
 
